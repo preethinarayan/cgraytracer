@@ -1,0 +1,13 @@
+
+This contains the OpenGL previewer for the input file to your raytracer.
+
+Makefile: Linux Makefile
+openglviewer.cpp source code
+openglviewer Linux executable
+openglviewer.exe Windows executable
+viewer/ Visual C++ environment; viewer.dsw = workspace
+testscenes/ Test scenes: scene1, scene2, scene3 
+	    These scenes are documented and also have multiple camera
+            positions you should try
+
+ 
