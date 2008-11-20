@@ -2,7 +2,6 @@
 #include <time.h>
 #include "Scene.h"
 #include "Transform.h"
-#include "nv/objload.h"
 #include "TGAimage.h"
 #include <stdio.h>
 #include <math.h>
@@ -67,10 +66,11 @@ void display() {
 
 void init()
 {
-	vec3 origin = vec3(0,0,-5);
-	vec3 normal = vec3(0,1,0);
-	CameraRay cr;
-	Plane sqaure(normal,5.0);
+	vec3 eye = vec3(0,0,-5);
+	vec3 center = vec3(0,0,0);
+	vec3 up = vec3(0,1,0);
+	CameraRay cr(eye,center,up,30.0);
+//	Plane sqaure(normal,5.0);
 	
 }
 
