@@ -1,37 +1,41 @@
-// Image.cpp: implementation of the Image class.
-//
-//////////////////////////////////////////////////////////////////////
-
+#include <stdlib.h>
+#include <assert.h>
+#include <stdio.h>
 #include "Image.h"
 
-Image::Image() 
-:width(0), height(0), data(NULL) 
+bool Image::setSize(char **args)
 {
-	glGenTextures(1, &textureID);
-	glBindTexture(GL_TEXTURE_2D, textureID);
-	
-	// We'll use clamp to edge as the default texture wrap mode for all tex types
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	width = 600;
+	height = 400;
+
+	/* RGB allocation */
+	pixel = (int *)malloc(sizeof(int) * width *height * 3);
+
+	return true;
 }
 
-Image::~Image() {
-		if (data != NULL) {
-			delete data;
-			data = NULL;
-			width = 0;
-			height = 0;
-		}
-	}
-
-int Image::getWidth() {return width;}
-int Image::getHeight() {return height;}
-unsigned char* Image::getData() {return data;}
-
-void Image::updateTexture()
+bool Image::writeImage()
 {
-	glBindTexture(GL_TEXTURE_2D, textureID);
-	glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	FILE *fp;
+	assert(fp = fopen(output_file, "wt")) ;
+
+	fprintf(fp, "P3\n");
+	fprintf(fp, "%d %d ", width, height);
+	fprintf(fp, "255");
+
+	for(int i=0; i<height; i++)
+		for(int j=0; j<width; j++)
+		{
+			fprintf(fp, " %d %d %d", pixel[i*width*3 + j*3 + 0], pixel[i*width*3 + j*3 + 1], pixel[i*width*3 + j*3 + 2]);
+		}
+	fclose(fp);
+	return true;
+}
+
+Image::Image(void)
+{
+}
+
+Image::~Image(void)
+{
 }
