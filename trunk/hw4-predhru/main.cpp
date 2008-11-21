@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <math.h>
 
+Scene *scene;
+CameraRay *camera;
+
 void sleep(unsigned int mseconds)
 {
     clock_t goal = mseconds + clock();
@@ -64,8 +67,9 @@ void init()
 	vec3 eye = vec3(0,0,-5);
 	vec3 center = vec3(0,0,0);
 	vec3 up = vec3(0,1,0);
+	scene = new Scene();
 	camera=new CameraRay(eye,center,up,30.0);
-	
+	scene->generateRays(camera);
 //	Plane sqaure(normal,5.0);
 	
 }

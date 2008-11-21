@@ -1,4 +1,5 @@
 #include "Scene.h"
+#include<stdio.h>
 
 CameraRay::CameraRay()
 	{
@@ -16,13 +17,15 @@ CameraRay::CameraRay(vec3& eye, vec3& center, vec3& up, float _fov)
 		v = cross(v,w,u);
 		fov = _fov;
 	}
+CameraRay camera;
+
 Ray::Ray()
 {
 	begin = vec3(0,0,0);
 	end = vec3(0,0,0);
 }
 
-void Scene::generateRays()
+void Scene::generateRays(CameraRay *camera)
 {
 	vec3 pt;
 	ray.begin = camera->getEye();
@@ -38,12 +41,12 @@ void Scene::generateRays()
 		{
 			vec3 color(0.0, 0.0, 0.0);
 			ray.end = camera->calcRays(i,j);
-			color = getRayIntersection(&myR, RECURSION_DEPTH, false);
+			//color = getRayIntersection(&myR, RECURSION_DEPTH, false);
 			/*if(Intersection(&myR, &pt))
 			{ 
 				color = FindColor(pt, RECURSION_DEPTH);
 			}*/
-			I->setPixel(i, j, color.x, color.y, color.z);
+			//I->setPixel(i, j, color.x, color.y, color.z);
 			//remainingtime += 1;
 			//percentremaining = (remainingtime / totaltime) * 100;
 			//system("cls");
