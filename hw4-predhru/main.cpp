@@ -6,11 +6,6 @@
 #include <stdio.h>
 #include <math.h>
 
-vec3 eye;
-vec3 up;
-vec3 center;
-vec3 vec = vec3(0,0,1);
-
 void sleep(unsigned int mseconds)
 {
     clock_t goal = mseconds + clock();
