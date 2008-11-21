@@ -25,19 +25,19 @@ Ray::Ray()
 void Scene::generateRays()
 {
 	vec3 pt;
-	.P0 = Cam->getEye();
-	printf("eye: %f, %f, %f\n", myR.P0.x, myR.P0.y, myR.P0.z); 
+	ray.begin = camera->getEye();
+	printf("eye is %f, %f, %f\n", ray.begin.x, ray.begin.y, ray.begin.z); 
 
-	float remainingtime = 0;
-	float totaltime = I->getHeight() + I->getWidth();
-	float percentremaining;
-	for(int i=0; i<I->getHeight(); i++)
+	//float remainingtime = 0;
+	//float totaltime = I->getHeight() + I->getWidth();
+	//float percentremaining;
+	for(int i=0; i<HEIGHT; i++)
 	{
-		//printf("\nTracing Row %d", i);
-		for(int j=0; j<I->getWidth(); j++)
+		printf("\nRow %d\n", i);
+		for(int j=0; j<WIDTH; j++)
 		{
 			vec3 color(0.0, 0.0, 0.0);
-			myR.P1 = Cam->calcRays(i,j);
+			ray.end = camera->calcRays(i,j);
 			color = getRayIntersection(&myR, RECURSION_DEPTH, false);
 			/*if(Intersection(&myR, &pt))
 			{ 

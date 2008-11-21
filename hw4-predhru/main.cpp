@@ -64,7 +64,8 @@ void init()
 	vec3 eye = vec3(0,0,-5);
 	vec3 center = vec3(0,0,0);
 	vec3 up = vec3(0,1,0);
-	CameraRay cr(eye,center,up,30.0);
+	camera=new CameraRay(eye,center,up,30.0);
+	
 //	Plane sqaure(normal,5.0);
 	
 }
