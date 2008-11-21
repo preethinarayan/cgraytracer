@@ -23,7 +23,7 @@ public:
 	vec3 calcRays(int i,int j);
 	vec3 getEye(){return eye;}
 };
-CameraRay *camera;
+//CameraRay *camera;
 
 class Ray
 {
@@ -39,7 +39,7 @@ private:
 
 public:
 Ray ray;
-void generateRays();
+void generateRays(CameraRay *camera);
 
 
 };
