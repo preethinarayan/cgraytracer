@@ -4,6 +4,7 @@
 	Version="9.00"
 	Name="hw3"
 	ProjectGUID="{AA69A06B-C7F8-488D-B76B-5A88911DF57C}"
+	RootNamespace="hw3"
 	TargetFrameworkVersion="0"
 	>
 	<Platforms>
@@ -268,7 +269,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath=".\Scene.cpp"
+				RelativePath=".\SceneObjs.cpp"
 				>
 			</File>
 			<File
@@ -297,6 +298,10 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
+				RelativePath=".\Camera.h"
+				>
+			</File>
+			<File
 				RelativePath="Image.h"
 				>
 			</File>
@@ -313,11 +318,7 @@
 				>
 			</File>
 			<File
-				RelativePath=".\Scene.h"
-				>
-			</File>
-			<File
-				RelativePath=".\SceneObjs.cpp"
+				RelativePath=".\SceneObjs.h"
 				>
 			</File>
 			<File
