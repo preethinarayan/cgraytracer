@@ -1,11 +1,13 @@
 #include <stdio.h>
 #include <time.h>
-#include "Scene.h"
+#include <string.h>
+#include "Camera.h"
 #include "Transform.h"
 #include <stdio.h>
 #include <math.h>
 
-Scene *scene;
+
+char *filename;
 CameraRay *camera;
 
 void sleep(unsigned int mseconds)
@@ -66,15 +68,25 @@ void init()
 	vec3 eye = vec3(-4.0,-4.0,4.0);
 	vec3 center = vec3(1,0,0);
 	vec3 up = vec3(0,1,0);
-	scene = new Scene();
-	camera=new CameraRay(eye,center,up,30.0);
-	printf("Eye in main : %f %f %f\n",camera->eye.x,camera->eye.y,camera->eye.z);
-	scene->generateRays(camera);
-//	Plane sqaure(normal,5.0);
-	
+	//camera=new CameraRay(eye,center,up,30.0);
+	Scene *scene = new Scene();
+	FILE *inputfile = fopen("Scene1.txt", "rt");
+	if(inputfile!=NULL)
+		printf("input file not null");
+	scene->initScene();
+	scene->parsefile(inputfile);
+	printf("After parse file\n");
+	camera = new CameraRay(scene->cameraval[0],scene->cameraval[1],scene->cameraval[2],scene->fov);
+	camera->generateRays(scene);
+	printf("After generate rays\n");
+	printf("The number of spheres are: %d\n the number of triangles are : %d\n the number of quads are: %d\n",scene->spherecount,scene->trianglecount,scene->quadcount);
+	printf("spheres radius is:%f\n",scene->slist[0].getRadius());
 }
 
 int main(int argc, char* argv[]) {
+	//strcpy(filename,argv[1]);
+	//strcpy(filename,"Scene1.txt");
+	printf("Filename is :%s\n",filename);
 	init();
 	return 0;
 }
