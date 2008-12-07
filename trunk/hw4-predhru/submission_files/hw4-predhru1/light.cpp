@@ -2,19 +2,11 @@
 #include "nv/nv_math.h"
 #include "nv/nv_algebra.h"
 
-bool Light::setvalues(char **args, Shade *shading, int type)
+bool Light::setvalues(float _position[3],float _values[3], Shade *shading, int type)
 {
-	if( !args )
-		return false;
-
-	for(int i=0; i<6; i++)
-	{
-		if(!args[i])
-			return false;
-	}
-
-	position = vec3(atof(args[0]),atof(args[1]),atof(args[2]));
-	ambient = vec3(atof(args[3]),atof(args[4]),atof(args[5]));
+	
+	position = vec3(_position[0],_position[1],_position[2]);
+	ambient = vec3(_values[0],_values[1],_values[2]);
 
 	lightType = type;
 

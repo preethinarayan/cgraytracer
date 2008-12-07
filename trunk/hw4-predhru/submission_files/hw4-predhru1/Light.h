@@ -72,7 +72,7 @@ class Light
 
 	Light();
 	~Light();
-	bool setvalues(char **args, Shade *shading, int type);
+	bool setvalues(float position[3],float values[3], Shade *shading, int type);
 	vec3 getGlobalAmbient(){return globalambient;}
 };
 

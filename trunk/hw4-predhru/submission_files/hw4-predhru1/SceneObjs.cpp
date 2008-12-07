@@ -9,63 +9,7 @@
 #define TEST_CULL 1
 
 Transformation *transform=new Transformation();
-
-//vec3 SceneObjs::calcIllumination(Light *light,vec3 normal, vec3 light_direction, vec3 viewer_direction,vec3 pt)
-//{
-//	vec3 color;
-//
-//	vec3 light_specular = light->specular;
-//	vec3 light_diffuse = light->diffuse;
-//	vec3 light_ambient = light->ambient;
-//
-//	vec3 direction_vector = pt - light->position;
-//	// distance between light source and vertex
-//	float d = direction_vector.norm();
-//	vec3 light_attenuation = light->attenuation;
-//
-//	vec3 reflection_direction;
-//	nv_scalar specularfactor;
-//	nv_scalar diffusefactor;
-//
-//	reflection_direction = -light_direction + (2 * dot(light_direction,normal) * normal);
-//	
-//	specularfactor = max(dot(reflection_direction,viewer_direction),0.0);
-//	specularfactor = pow(specularfactor,shininess);
-//	diffusefactor = max(dot(light_direction,normal),0.0);
-//	
-//	color = (calculateAttenuation(light_attenuation,d) * spotlight_effect(light,direction_vector)) * ((light_ambient * this->ambient) + (specularfactor * light_specular * this->specular) + (diffusefactor * light_diffuse * this->diffuse));
-//	return color;
-//}
-//
-//float SceneObjs::calcAttenuation(vec3 attenuation, float d)
-//{
-//	float value;
-//	value = attenuation.x + (attenuation.y * d) + (attenuation.z * d * d);
-//	value = 1/value;
-//	return value;
-//}
-//
-//float SceneObjs::spotlight_effect(Light *light,vec3 direction_vector)
-//{
-//	// If the spot light is actually not a spot light ;)
-//	if(light->spot_cutoff >= 180.0)
-//	{
-//		return 1.0;
-//	}
-//	float cone;
-//	direction_vector.normalize();
-//	light->spot_direction.normalize();
-//	
-//	cone = dot(direction_vector,light->spot_direction);
-//	// If the vertex is outside the spotlight
-//	if(cone < cosf(degToRad * light->spot_cutoff))
-//	{
-//		return 0.0;
-//	}
-//	cone = max(cone,0.0);
-//	cone = pow(cone, light->spot_exponent);
-//	return cone;
-//}
+Shade *shading = new Shade();
 
 void SceneObjs::convertRayToHomogenous(Ray &ray, RayHomo &rhomo)
 {
@@ -77,7 +21,7 @@ void SceneObjs::convertRayToHomogenous(Ray &ray, RayHomo &rhomo)
 	rhomo.end.x=ray.end.x;
 	rhomo.end.y=ray.end.y;
 	rhomo.end.z=ray.end.z;
-	rhomo.end.w=0.0;
+	rhomo.end.w=1.0;
 
 	return;
 }
@@ -174,6 +118,21 @@ vec3 Sphere::getColor(Ray *ray, vec3 pt, int depth)
 	return color;
 }
 
+void Sphere::setparams(vec3 args,Shade *shade)
+{
+	if(shade->isAmbientSet)
+		ambient = shade->ambient;
+	if(shade->isDiffuseSet)
+		diffuse = shade->diffuse;
+	if(shade->isEmissionSet)
+		emission = shade->emission;
+	if(shade->isSpecularSet)
+		specular = shade->specular;
+	if(shade->isShininessSet)
+		shininess = shade->shininess;
+
+}
+
 //Triangle
 Triangle::Triangle()
 {
@@ -199,13 +158,29 @@ vec3 Triangle::transformPoint(vec3 pt)
 
 vec3 Triangle::getColor(Ray *ray, vec3 pt, int depth)
 {
-	vec3 color(255.0,0.0,0.0);
+	vec3 color(0.0,0.0,0.0);
+	
 	return color;
 }
 
 vec3 subt(vec3 v1, vec3 v2)
 {
 	return (v1 - v2);
+}
+
+void Triangle::setparams(vec3 args, Shade *shade)
+{
+	if(shade->isAmbientSet)
+		ambient = shade->ambient;
+	if(shade->isDiffuseSet)
+		diffuse = shade->diffuse;
+	if(shade->isEmissionSet)
+		emission = shade->emission;
+	if(shade->isSpecularSet)
+		specular = shade->specular;
+	if(shade->isShininessSet)
+		shininess = shade->shininess;
+
 }
 
 vec4 SceneObjs::getHomogenous(vec3 v)
@@ -473,6 +448,26 @@ void Scene::parsefile (FILE *fp) {
 	height = sizey;
 	}
     
+	/* Other properties  */
+
+	 else if (!strcmp(command, "maxdepth")) {
+	  int num = sscanf(line, "%s %d", command, &maxdepth) ;
+	  assert(num == 2) ;
+	  assert(!strcmp(command, "maxdepth")) ;
+	  fprintf(stderr, "Maxdepth set to %d but irrelevant for OpenGL\n", 
+		  maxdepth) ;
+	}
+
+       else if (!strcmp(command, "output")) {
+	   char out[300] ;
+	   int num = sscanf(line, "%s %s", command, out) ;
+	   assert(num == 2) ;
+	   assert(!strcmp(command, "output")) ;
+	   //fprintf(stderr, "Output image file set to: %s but ignored for OpenGL\n",out) ;
+	   strcpy(outputfile,out);
+	   printf("The output file is : %s\n",out);
+       }
+
 
     // Now, we simply parse the file by looking at the first line for the 
     // various commands
@@ -613,25 +608,7 @@ void Scene::parsefile (FILE *fp) {
 		transform->popMat();
 	}
 
-	/* Other properties  */
-
-	 else if (!strcmp(command, "maxdepth")) {
-	  int num = sscanf(line, "%s %d", command, &maxdepth) ;
-	  assert(num == 2) ;
-	  assert(!strcmp(command, "maxdepth")) ;
-	  fprintf(stderr, "Maxdepth set to %d but irrelevant for OpenGL\n", 
-		  maxdepth) ;
-	}
-
-       else if (!strcmp(command, "output")) {
-	   char out[300] ;
-	   int num = sscanf(line, "%s %s", command, out) ;
-	   assert(num == 2) ;
-	   assert(!strcmp(command, "output")) ;
-	   fprintf(stderr, "Output image file set to: %s but ignored for OpenGL\n",out) ;
-	   strcpy(outputfile,out);
-       }
-
+	
 	   /**************** Lights******************/
 
 	   else if (!strcmp(command, "directional")) {
@@ -643,6 +620,7 @@ void Scene::parsefile (FILE *fp) {
 	 //int mylight = GL_LIGHT0 + lightnum ;
 	 Light *light = new Light();
 	 lights.push_back(light);
+	 light->setvalues(direction,color,shading,0);
 	 ++lightnum ;
        }
 
@@ -651,26 +629,37 @@ void Scene::parsefile (FILE *fp) {
 	 int num = sscanf(line, "%s %f %f %f %f %f %f", command, direction, direction+1, direction+2, color, color+1, color+2) ;
 	 assert(num == 7) ;
 	 assert(lightnum >= 0 && lightnum < 7) ;
-
 	 //int mylight = GL_LIGHT0 + lightnum ;
 	 Light *light = new Light();
 	 lights.push_back(light);
+	 light->setvalues(direction,color,shading,1);
 	 ++lightnum ;	 
        }
 
      else if (!strcmp(command, "attenuation")) {
-       int num = sscanf(line, "%s %lf %lf %lf", command, attenuation, attenuation + 1, attenuation +2) ;
+	   char **args;			
+       int num = sscanf(line, "%s %lf %lf %lf", command, args, args + 1, args +2) ;
        assert(num == 4) ;
        assert(!strcmp(command, "attenuation")) ;
+		if(!shading)
+		   shading = new Shade();
+		shading->setvalues(args,5);
      }
 
      else if (!strcmp(command, "ambient")) {
-       float ambient[4] ; ambient[3] = 1.0 ;
-       int num = sscanf(line, "%s %f %f %f", command, ambient, ambient+1, ambient+2) ;
+       char **args;	
+       int num = sscanf(line, "%s %f %f %f", command, args, args + 1, args +2) ;
        assert(num == 4) ;
        assert(!strcmp(command, "ambient")) ;
-       Shade *shading = new Shade();
-	   shading->ambient = vec3(ambient[0],ambient[1],ambient[2]);
+       if(!shading)
+		   shading = new Shade();
+	   else
+		   if(shading->isAmbientSet)
+		   {
+			   delete shading;
+			   shading = new Shade();
+		   }
+	   shading->setvalues(args,0);
      }
 
     /*******************************************************/
@@ -678,31 +667,63 @@ void Scene::parsefile (FILE *fp) {
     /****************** MATERIALS ************************/
 
      else if (!strcmp(command, "diffuse")) {
-       float diffuse[4] ; diffuse[3] = 1.0 ;
-       int num = sscanf(line, "%s %f %f %f", command, diffuse, diffuse+1, diffuse+2) ;
+       char **args;
+       int num = sscanf(line, "%s %f %f %f", command,args, args + 1, args +2) ;
        assert(num == 4) ; assert (!strcmp(command, "diffuse")) ;
-       
+       if(!shading)
+		   shading = new Shade();
+	   else
+		   if(shading->isDiffuseSet)
+		   {
+			   delete shading;
+			   shading = new Shade();
+		   }
+	   shading->setvalues(args,2);
      }
 
      else if (!strcmp(command, "specular")) {
-       float specular[4] ; specular[3] = 1.0 ;
-       int num = sscanf(line, "%s %f %f %f", command, specular, specular+1, specular+2) ;
+       char **args;
+       int num = sscanf(line, "%s %f %f %f", command,args, args + 1, args +2) ;
        assert(num == 4) ; assert (!strcmp(command, "specular")) ;
-       
+       if(!shading)
+		   shading = new Shade();
+	   else
+		   if(shading->isSpecularSet)
+		   {
+			   delete shading;
+			   shading = new Shade();
+		   }
+	   shading->setvalues(args,1);
      }
 
      else if (!strcmp(command, "shininess")) {
-       float shininess ;
-       int num = sscanf(line, "%s %f", command, &shininess) ;
+       char **args;
+       int num = sscanf(line, "%s %f", command, args) ;
        assert(num == 2) ; assert (!strcmp(command, "shininess")) ;
-       
+       if(!shading)
+		   shading = new Shade();
+	   else
+		   if(shading->isShininessSet)
+		   {
+			   delete shading;
+			   shading = new Shade();
+		   }
+		   shading->setvalues(args,4);
      }
 
      else if (!strcmp(command, "emission")) {
-       float emission[4] ; emission[3] = 1.0 ;
-       int num = sscanf(line, "%s %f %f %f", command, emission, emission+1, emission+2) ;
+      char **args;
+       int num = sscanf(line, "%s %f %f %f", command, args, args + 1, args +2) ;
        assert(num == 4) ; assert (!strcmp(command, "emission")) ;
-       
+       if(!shading)
+		   shading = new Shade();
+	   else
+		   if(shading->isEmissionSet)
+		   {
+			   delete shading;
+			   shading = new Shade();
+		   }
+		   shading->setvalues(args,3);
      }
 	count++;
 	}
