@@ -104,6 +104,7 @@ public:
 	vec3 transformPoint(vec3 pt);
 	bool intersect_ray(Ray& ray, float& u, float& v, float& t);
 	vec3 getColor(Ray *ray, vec3 pt, int depth);
+	void setparams(vec3 args,Shade *shade);
 };
 
 class Sphere : public SceneObjs
@@ -121,6 +122,7 @@ public:
 	vec3 transformPoint(vec3 pt);
 	bool intersect_ray(Ray& r, float& u,float& v,float& t);
 	vec3 getColor(Ray *ray, vec3 pt, int depth);
+	void setparams(vec3 args,Shade *shade);
 };
 
 class Scene
@@ -148,7 +150,7 @@ public:
 	float fov;
 	vector<SceneObjs*> sobjects;
 	int currIntersectionObj;
-	char *outputfile;	
+	char outputfile[300];	
 	int width;
 	int height;
 	vector<Light*> lights;

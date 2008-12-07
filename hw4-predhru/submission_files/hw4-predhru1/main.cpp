@@ -84,7 +84,7 @@ void init()
 int main(int argc, char* argv[]) {
 	//strcpy(filename,argv[1]);
 	//strcpy(filename,"Scene1.txt");
-	printf("Filename is :%s\n",filename);
+	//printf("Filename is :%s\n",filename);
 	init();
 	return 0;
 }
