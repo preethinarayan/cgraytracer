@@ -16,18 +16,18 @@ void sleep(unsigned int mseconds)
     while (goal > clock());
 }
 
-void ReduceToUnit(float vector[3])					// Reduces A Normal Vector (3 Coordinates)
+void ReduceToUnit(float vect[3])					// Reduces A Normal Vector (3 Coordinates)
 {									// To A Unit Normal Vector With A Length Of One.
 	float length;							// Holds Unit Length
 	// Calculates The Length Of The Vector
-	length = (float)sqrt((vector[0]*vector[0]) + (vector[1]*vector[1]) + (vector[2]*vector[2]));
+	length = (float)sqrt((vect[0]*vect[0]) + (vect[1]*vect[1]) + (vect[2]*vect[2]));
 
 	if(length == 0.0f)						// Prevents Divide By 0 Error By Providing
 		length = 1.0f;						// An Acceptable Value For Vectors To Close To 0.
 
-	vector[0] /= length;						// Dividing Each Element By
-	vector[1] /= length;						// The Length Results In A
-	vector[2] /= length;						// Unit Normal Vector.
+	vect[0] /= length;						// Dividing Each Element By
+	vect[1] /= length;						// The Length Results In A
+	vect[2] /= length;						// Unit Normal Vector.
 }
 
 
@@ -79,8 +79,6 @@ void init()
 	camera = new CameraRay(scene->cameraval[0],scene->cameraval[1],scene->cameraval[2],scene->fov);
 	camera->generateRays(scene);
 	printf("After generate rays\n");
-	printf("The number of spheres are: %d\n the number of triangles are : %d\n the number of quads are: %d\n",scene->spherecount,scene->trianglecount,scene->quadcount);
-	printf("spheres radius is:%f\n",scene->slist[0].getRadius());
 }
 
 int main(int argc, char* argv[]) {

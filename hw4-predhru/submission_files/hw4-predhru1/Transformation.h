@@ -10,7 +10,7 @@ class Transformation
 	mat4 transform;
 
 public:
-	Transformation(void);
+	Transformation();
 	void push(mat4 Mat);
 	mat4 pop();
 	bool isStackEmpty(){return top==-1;};

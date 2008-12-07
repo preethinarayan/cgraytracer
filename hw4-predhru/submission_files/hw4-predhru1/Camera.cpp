@@ -1,10 +1,10 @@
 #include "Camera.h"
 #include "stdio.h"
 #include "Image.h"
+#define INF 10000
 #define pi 3.1428571
+#define RECURSION_DEPTH 5
 
-
-//CameraRay
 CameraRay::CameraRay()
 	{
 		u = vec3(0,0,0);
@@ -12,6 +12,65 @@ CameraRay::CameraRay()
 		v = vec3(0,0,0);
 		fov = 0.0;
 	}
+
+bool CameraRay::Intersection(Ray *ray, vec3 *pt, bool secLargest,Scene *scene)
+{
+	float u,v,t;	/* parameter of inte
+
+//CameraRayrsection */
+	int min_primitive = -1;
+	float min_t = INF;
+	float sec_min_t = INF;
+	int sec_min_primitive = -1;
+	mat4 M;
+	bool intersect = false;
+	int  i=0;
+	for(int k=0; k<scene->sobjects.size(); k++)
+	{
+		intersect = scene->sobjects[k]->intersect_ray(*(ray),u,v,t);
+		if(t>0 && t<min_t)
+		{
+			sec_min_t=min_t;
+			sec_min_primitive = min_primitive;
+
+			min_t=t;
+			min_primitive = k;
+		}
+	}
+	scene->currIntersectionObj = min_primitive;
+	if(min_t!=INF)
+	{
+		//objs[scene->currIntersectionObj]->transformNormal();
+		
+		*pt = ray->begin + min_t*ray->end;
+		//printf("Point before transform : %f %f %f\n",(*pt).x,(*pt).y,(*pt).z);
+		*pt = scene->sobjects[scene->currIntersectionObj]->transformPoint(*pt);
+		//printf("Point after transform : %f %f %f\n",(*pt).x,(*pt).y,(*pt).z);
+		return true;		
+	}
+	if(secLargest && sec_min_t !=INF)
+	{
+		scene->currIntersectionObj = sec_min_primitive;
+		//scene->sobjects[scene->currIntersectionObj]->transformNormal();
+		*pt = ray->begin + sec_min_t*ray->end;
+		//*pt = objs[currIntersectionObj]->transformPoint(*pt);
+		return true;		
+	}	
+	return false;
+}
+
+vec3 CameraRay::getRayIntersection(Ray *ray,int depth, bool secLargest,Scene *scene)
+{
+	vec3 color(0.0, 0.0, 0.0);
+	vec3 point;
+	if(Intersection(ray, &point, secLargest,scene))
+	{	
+		color = scene->sobjects[scene->currIntersectionObj]->getColor(ray, point, depth);
+	}
+	return color;
+	
+}
+
 CameraRay::CameraRay(vec3 _eye, vec3 _center, vec3 _up, float _fov)
 	{
 		eye = _eye;
@@ -55,13 +114,11 @@ void CameraRay::generateRays(Scene *scene)
 	int flag=0;
 	float u,v,t;
 	Image img;
-	img.setSize();
+	img.setSize(scene->width,scene->height);
 	//float remainingtime = 0;
 	//float totaltime = I->getHeight() + I->getWidth();
 	//float percentremaining;
-	Triangle tr;
-	Sphere s;
-	Quadrilateral q;
+	
 	for(int i=0; i<HEIGHT; i++)
 	{
 		//printf("\nRow %d\n", i);
@@ -70,44 +127,10 @@ void CameraRay::generateRays(Scene *scene)
 			flag=0;
 			vec3 color(0.0, 0.0, 0.0);
 			ray.end = calcRays(i,j);
-			//color = getRayIntersection(&myR, RECURSION_DEPTH, false);
-			//img.setPixel(i,j,5,5,5);
-			for(int m=0;m<scene->spherecount;m++)
-			{
-				s = scene->slist[m];
-				if(s.intersect_ray(s,ray,t))
-				{
-				img.setPixel(i,j,50,100,100);	
-				flag=1;
-				//printf("intersection!\n");
-				}
-			}
-
-			for(int m=0;m<scene->quadcount;m++)
-			{
-				q = scene->qlist[m];
-				if(q.intersect_ray(q,ray,u,v,t))
-				{
-				img.setPixel(i,j,100,50,200);
-				flag=1;
-				printf("intersection!\n");
-				}
-			}
-
-			for(int m=0;m<scene->trianglecount;m++)
-			{
-				tr = scene->tlist[m]; 
-				if(tr.intersect_ray(tr,ray,u,v,t))
-				{
-				img.setPixel(i,j,200,50,50);
-				flag=1;
-				//printf("intersection!\n");
-				}
-			}
-				
-			if(flag==0)
-				img.setPixel(i,j,5,5,5);
 			
+			
+			color = getRayIntersection(&ray, RECURSION_DEPTH, false,scene);
+			img.setPixel(i,j,color.x,color.y,color.z);
 			/*if(Intersection(&myR, &pt))
 			{ 
 				color = FindColor(pt, RECURSION_DEPTH);
@@ -120,5 +143,5 @@ void CameraRay::generateRays(Scene *scene)
 		}
 	}
 
-	img.writeImage();
+	img.writeImage(scene->outputfile);
 }
