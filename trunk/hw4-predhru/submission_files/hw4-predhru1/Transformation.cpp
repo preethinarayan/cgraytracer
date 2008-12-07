@@ -1,9 +1,7 @@
 #include "Transformation.h"
+#include <stdio.h>
 
-mat4 IDENTITY(1, 0, 0, 0, 
-			  0, 1, 0, 0, 
-			  0, 0, 1, 0, 
-			  0, 0, 0, 1);
+
 
 void Transformation::push(mat4 Mat)
 {
@@ -29,12 +27,17 @@ void Transformation::calcTransform()
 	{
 		//right multiplying each element in the stack to get the current transform
 		transform = (*stack[k])*transform;
+		//transform = mult	transform,(*stack[k]),transform);
 	}
 }
 
 
 bool Transformation::pushMat()
 {
+	mat4 IDENTITY = mat4(1, 0, 0, 0, 
+			  0, 1, 0, 0, 
+			  0, 0, 1, 0, 
+			  0, 0, 0, 1);
 	if(isStackFull())
 		return false;
 	push(IDENTITY);
@@ -72,7 +75,7 @@ bool Transformation::translate(vec3 trans)
 	push(pop()*T);
 	//getting the current transform from the stack elements.
 	calcTransform();
-
+	printf("\n In translate of transformation\n");
 	return true;
 }
 
@@ -88,6 +91,10 @@ bool Transformation::rotate(vec3 Rotate, float angle)
 			return false;
 	}
 */
+	mat4 IDENTITY = mat4(1, 0, 0, 0, 
+			  0, 1, 0, 0, 
+			  0, 0, 1, 0, 
+			  0, 0, 0, 1);
 	mat4 R=IDENTITY;
 	vec3 r = Rotate;
 	//rotatating the matrix R by 'angle' in the direction
@@ -123,13 +130,17 @@ bool Transformation::scale(vec3 sc)
 	return true;
 }
 
-Transformation::Transformation(void)
+Transformation::Transformation()
 {
+	mat4 IDENTITY = mat4(1, 0, 0, 0, 
+			  0, 1, 0, 0, 
+			  0, 0, 1, 0, 
+			  0, 0, 0, 1);
 	top=-1;
 	push(IDENTITY);	
 	transform=IDENTITY;
 }
 
-Transformation::~Transformation(void)
+Transformation::~Transformation()
 {
 }

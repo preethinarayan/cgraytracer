@@ -1,73 +1,133 @@
-//Lighting is also easily achieved in OpenGL.
-//You enable the depth, the lighting, and which light you 
-//are using.
+#include "Light.h"
+#include "nv/nv_math.h"
+#include "nv/nv_algebra.h"
 
-//Enabling the lighting is done with:
-//glEnable (GL_LIGHTING);
-//and enabling certain lights is done with:
-//glEnable (GL_LIGHT0);
+bool Light::setvalues(char **args, Shade *shading, int type)
+{
+	if( !args )
+		return false;
 
-//Now with your lights, this will only set up the default values.
-//Which means that the light will be white.
+	for(int i=0; i<6; i++)
+	{
+		if(!args[i])
+			return false;
+	}
 
-//One thing to keep in mind with your lighting is that the light 
-//is not determined by the object. Each object has points called Normals, 
-//these are what determine how the light interacts with the object. 
-//Some shapes automatically generate Normals but there are others that
-//dont. So you can set up your Normals manually, but I do not know the
-//mathematics behind this yet. So I will leave that for later. 
+	position = vec3(atof(args[0]),atof(args[1]),atof(args[2]));
+	ambient = vec3(atof(args[3]),atof(args[4]),atof(args[5]));
 
-//Later on in the different lighting types tutorial. I will explain 
-//how to enable different types of lighting such as Diffuse, Ambient,
-//Specular and Spot lights. 
+	lightType = type;
 
-#include <GL/gl.h>
-#include <GL/glut.h>
-
-GLfloat angle = 0.0;
-
-void cube (void) {
-	glRotatef(angle, 1.0, 0.0, 0.0);
-	glRotatef(angle, 0.0, 1.0, 0.0);
-	glRotatef(angle, 0.0, 0.0, 1.0);
-	glColor3f(1.0, 0.0, 0.0);
-	glutSolidCube(2);
+	if(shading)
+	{
+		if(shading->isAmbientSet)
+		{
+			globalambient = shading->ambient;
+		}
+		if(shading->isSpecularSet)
+		{
+			specular = shading->specular;
+		}
+		if(shading->isDiffuseSet)
+		{
+			diffuse = shading->diffuse;
+		}
+		attenuation = shading->attenuation;
+		spot_direction = shading->spot_direction;
+		spot_cutoff = shading->spot_cutoff;
+		spot_exponent = shading->spot_exponent;
+	}
+	else
+	{
+		return false;
+	}
+	return true;
 }
 
-void init (void) {
-	glEnable (GL_DEPTH_TEST);
-	glEnable (GL_LIGHTING);
-	glEnable (GL_LIGHT0);
+Light::Light()
+{
+	ambient = vec3(0.0,0.0,0.0);
+	diffuse = vec3(0.0,0.0,0.0);
+	specular = vec3(0.0,0.0,0.0);
+	emission = vec3(0.0,0.0,0.0);
+	globalambient = vec3(0.2,0.2,0.2);
 }
 
-void display (void) {
-	glClearColor (0.0,0.0,0.0,1.0);
-    glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glLoadIdentity();  
-	gluLookAt (0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-	cube();
-	glutSwapBuffers();
-	angle ++;
+Shade::Shade()
+{
+	isSpecularSet = false;
+	isDiffuseSet = false;
+	isAmbientSet = false;
+	isEmissionSet = false;
+	isShininessSet = false;
+	isRefractionEnable = false;
+	shininess = 0;
+	emission = vec3(0,0,0);
+	attenuation = vec3(1,0,0);
+	// Default values for spot light as in OpenGL
+	spot_direction = vec3(0.0,0.0,-1.0);
+	spot_cutoff = 180.0;
+	spot_exponent = 0.0;
+	for(int i=0;i<8;i++) 
+			shadingType[i]=i;
 }
 
-void reshape (int w, int h) {
-	glViewport (0, 0, (GLsizei)w, (GLsizei)h);
-	glMatrixMode (GL_PROJECTION);
-	glLoadIdentity ();
-	gluPerspective (60, (GLfloat)w / (GLfloat)h, 1.0, 100.0);
-	glMatrixMode (GL_MODELVIEW);
-}
+bool Shade::setvalues(char **args,int type)
+{
+	if( !args )
+		return false;
 
-int main (int argc, char **argv) {
-    glutInit (&argc, argv);
-	glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
-	glutInitWindowSize (500, 500);
-	glutInitWindowPosition (100, 100);
-    glutCreateWindow ("A basic OpenGL Window");
-	init ();
-    glutDisplayFunc (display);
-	glutIdleFunc (display);
-	glutReshapeFunc (reshape);
-    glutMainLoop ();
-    return 0;
+	if(type == 4)
+	{
+		if(!args[0])
+			return false;
+	}
+	else
+	{
+		int argc = (type == 6)? 5 : 3;
+		for(int i=0; i<argc; i++)
+		{
+			if(!args[i])
+				return false;
+		}
+	}
+
+	switch(type)
+	{
+	case 0:
+		isAmbientSet = true;
+		ambient =  vec3((float)atof(args[0]),(float)atof(args[1]),(float)atof(args[2]));
+		break;
+	case 1:
+		isSpecularSet = true;
+		specular = vec3((float)atof(args[0]),(float)atof(args[1]),(float)atof(args[2]));
+		break;
+	case 2:
+		isDiffuseSet = true;
+		diffuse = vec3((float)atof(args[0]),(float)atof(args[1]),(float)atof(args[2]));
+		break;
+	case 3:
+		isEmissionSet = true;
+		emission = vec3((float)atof(args[0]),(float)atof(args[1]),(float)atof(args[2]));
+		break;
+	case 4:
+		isShininessSet = true;
+		shininess = (float)atof(args[0]);
+		break;
+	case 5:
+		attenuation = vec3((float)atof(args[0]),(float)atof(args[1]),(float)atof(args[2]));
+		break;
+	case 6:
+		spot_direction = vec3((float)atof(args[0]),(float)atof(args[1]),(float)atof(args[2]));
+		spot_cutoff = (float)atof(args[3]);
+		spot_exponent = (float)atof(args[4]);
+		break;	
+	case 7:
+		ref_eta1 = (float)atof(args[0]);
+		ref_eta2 = (float)atof(args[1]);
+		transmit = vec3((float)atof(args[2]),(float)atof(args[3]),(float)atof(args[4]));
+		isRefractionEnable=true;
+		break;
+	}
+	return true;
 }

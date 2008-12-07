@@ -1,6 +1,4 @@
 
-#define output_file "hw4_raytracer.ppm"
-
 class Image
 {
 	int width;
@@ -8,7 +6,7 @@ class Image
 	int *pixel;
 public:
 	Image(void);
-	bool setSize();
+	bool setSize(int _width,int _height);
 	int getWidth(){ return width; };
 	int getHeight(){ return height; };
 	void setPixel(int i, int j, int R, int G, int B)
@@ -17,7 +15,7 @@ public:
 		pixel[i*width*3 + j*3 + 1] = G; 
 		pixel[i*width*3 + j*3 + 2] = B;
 	};
-	bool writeImage();
+	bool writeImage(char *file);
 
 public:
 	~Image(void);

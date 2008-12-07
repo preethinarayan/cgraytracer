@@ -3,10 +3,10 @@
 #include <stdio.h>
 #include "Image.h"
 
-bool Image::setSize()
+bool Image::setSize(int _width,int _height)
 {
-	width = 640;
-	height = 480;
+	width = _width;
+	height = _height;
 
 	/* RGB allocation */
 	pixel = (int *)malloc(sizeof(int) * width *height * 3);
@@ -14,10 +14,10 @@ bool Image::setSize()
 	return true;
 }
 
-bool Image::writeImage()
+bool Image::writeImage(char *file)
 {
 	FILE *fp;
-	assert(fp = fopen(output_file, "wt")) ;
+	assert(fp = fopen(file, "wt")) ;
 
 	fprintf(fp, "P3\n");
 	fprintf(fp, "%d %d ", width, height);
