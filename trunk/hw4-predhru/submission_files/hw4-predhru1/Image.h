@@ -1,4 +1,4 @@
-
+#define outfile "hw4_raytracer.ppm"
 class Image
 {
 	int width;

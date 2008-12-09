@@ -44,7 +44,7 @@ public:
 	float spot_exponent;
 public:
 	Shade();
-	bool setvalues(char **args, int type);
+	bool setvalues(float args[6], int type);
 	void disableRefraction(){isRefractionEnable=false;};
 	bool isRefractionEnabled(){return isRefractionEnable;};
 

@@ -14,10 +14,10 @@ bool Image::setSize(int _width,int _height)
 	return true;
 }
 
-bool Image::writeImage(char *file)
+bool Image::writeImage(char *outputfile)
 {
 	FILE *fp;
-	assert(fp = fopen(file, "wt")) ;
+	assert(fp = fopen(outputfile, "wt")) ;
 
 	fprintf(fp, "P3\n");
 	fprintf(fp, "%d %d ", width, height);

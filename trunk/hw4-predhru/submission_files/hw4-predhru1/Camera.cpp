@@ -25,9 +25,13 @@ bool CameraRay::Intersection(Ray *ray, vec3 *pt, bool secLargest,Scene *scene)
 	mat4 M;
 	bool intersect = false;
 	int  i=0;
+	//printf("Number of objects : %d\n",scene->sobjects.size());
 	for(int k=0; k<scene->sobjects.size(); k++)
 	{
 		intersect = scene->sobjects[k]->intersect_ray(*(ray),u,v,t);
+		if(intersect)
+			//printf("INTERSECTION!!!!\n");
+
 		if(t>0 && t<min_t)
 		{
 			sec_min_t=min_t;
@@ -65,7 +69,7 @@ vec3 CameraRay::getRayIntersection(Ray *ray,int depth, bool secLargest,Scene *sc
 	vec3 point;
 	if(Intersection(ray, &point, secLargest,scene))
 	{	
-		color = scene->sobjects[scene->currIntersectionObj]->getColor(ray, point, depth);
+		color = scene->sobjects[scene->currIntersectionObj]->getColor(scene,ray, point, depth);
 	}
 	return color;
 	
@@ -88,17 +92,17 @@ CameraRay::CameraRay(vec3 _eye, vec3 _center, vec3 _up, float _fov)
 		printf("eye is : %f %f %f\n",eye.x,eye.y,eye.z);
 	}
 
-vec3 CameraRay::calcRays(int i, int j)
+vec3 CameraRay::calcRays(Scene *scene,int i, int j)
 {
 	vec3 ray;
 	float A;
 	float B;
 
 	float fovy=fov;
-	float fovx=fovy*float(float(WIDTH)/float(HEIGHT));
+	float fovx=fovy*float(float(scene->width)/float(scene->height));
 	
-	A = tanf((pi / 180) * (fovx/2.0)) * ((j - (WIDTH/2.0))/(WIDTH/2.0));
-	B = tanf((pi / 180) * (fovy/2.0)) * ((HEIGHT/2.0) - i)/ (HEIGHT/2.0);
+	A = tanf((pi / 180) * (fovx/2.0)) * ((j - (scene->width/2.0))/(scene->width/2.0));
+	B = tanf((pi / 180) * (fovy/2.0)) * ((scene->height/2.0) - i)/ (scene->height/2.0);
 
 	ray = (A * u) + (B * v) - w;
 	ray.normalize();
@@ -119,14 +123,14 @@ void CameraRay::generateRays(Scene *scene)
 	//float totaltime = I->getHeight() + I->getWidth();
 	//float percentremaining;
 	
-	for(int i=0; i<HEIGHT; i++)
+	for(int i=0; i<scene->height; i++)
 	{
 		//printf("\nRow %d\n", i);
-		for(int j=0; j<WIDTH; j++)
+		for(int j=0; j<scene->width; j++)
 		{
 			flag=0;
 			vec3 color(0.0, 0.0, 0.0);
-			ray.end = calcRays(i,j);
+			ray.end = calcRays(scene,i,j);
 			
 			
 			color = getRayIntersection(&ray, RECURSION_DEPTH, false,scene);

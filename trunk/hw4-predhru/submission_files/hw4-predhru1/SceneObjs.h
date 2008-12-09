@@ -4,7 +4,6 @@
 #include <vector>
 #define vector std::vector
 
-
 class Ray
 {
 public:
@@ -21,6 +20,7 @@ public:
 	RayHomo();
 };
 
+class Scene;
 class SceneObjs
 {
 protected:
@@ -38,13 +38,20 @@ protected:
 	vec3 transmit;*/
 
 public:
-	SceneObjs() { }
+	SceneObjs() { 
+	ambient = vec3(0,0,0);
+	diffuse= vec3(0,0,0);
+	specular= vec3(0,0,0);
+	emission= vec3(0,0,0);
+	shininess = 0.0;
+	}
 //	virtual float Intersect(Ray_t *R) = 0;
-	virtual vec3 getColor(Ray *ray, vec3 pt, int depth) = 0;
+//	virtual vec3 getColor(Scene* scene, Ray *ray, vec3 pt, int depth) = 0;
 //
 //	/* transformations routines */	
-//	vec3 getTransformedNormal(mat4 transform, vec3 n);
-//	virtual vec3 getNormal(vec3 pt) = 0;
+	vec3 TransformNormal(mat4 trans, vec3 normal);
+	virtual vec3 getNormal(vec3 point) = 0;
+	//virtual void normalTransform()=0;
 //	
 ////	virtual Ray_t getReflectedRay(Ray *R, vec3 pt)=0;
 //
@@ -63,10 +70,10 @@ public:
 	/*virtual vec3 getLiteColor(Light *light, vec3 light_direction,vec3 viewer_direction, vec3 pt) = 0;*/
 	vec3 getEmission(){return emission;}
 	vec3 getAmbient(){return ambient;}
-	/*vec3 calcIllumination(Light *light, vec3 normal, vec3 light_direction, vec3 viewer_direction, vec3 pt);
-	float spotlight_effect(Light *light, vec3 direction_vector);
-	float calcAttenuation(vec3 attenuation, float d);*/
-
+	/*vec3 calcIllumination(Light *light, vec3 normal, vec3 light_direction, vec3 viewer_direction, vec3 pt);*/
+	float spotlight_effect(Light *light, vec3 dir);
+	float calculateAttenuation(vec3 attenuation, float distance);
+	vec3 getColor(Scene *scene,Ray *ray, vec3 pt, int depth);
 	//virtual Ray_t getReflectedRay(Ray *R, vec3 pt) = 0;
 	//virtual vec3 getReflections(Ray *R, vec3 pt, int depth) = 0;
 
@@ -87,7 +94,7 @@ class Quadrilateral : public SceneObjs
 	 vec3& v_01()  { return vertices[3]; }
 	 vec3 transformPoint(vec3 pt);
 	 bool intersect_ray(Ray& r, float& u, float& v, float& t);
-	 vec3 getColor(Ray *ray, vec3 pt, int depth);
+	// vec3 getColor(Scene *scene,Ray *ray, vec3 pt, int depth);
 };
 
 class Triangle : public SceneObjs
@@ -103,8 +110,12 @@ public:
 	vec3 getVertex3(){return vertices[2];};
 	vec3 transformPoint(vec3 pt);
 	bool intersect_ray(Ray& ray, float& u, float& v, float& t);
-	vec3 getColor(Ray *ray, vec3 pt, int depth);
-	void setparams(vec3 args,Shade *shade);
+	//vec3 getColor(Scene *scene,Ray *ray, vec3 pt, int depth);
+	vec3 getNormal(vec3 point);
+	//void normalTransform(){};
+	void setparams(Shade *shade);
+	float area( vec3 v1, vec3 v2, vec3 v3);
+
 };
 
 class Sphere : public SceneObjs
@@ -121,19 +132,23 @@ public:
 	float getRadius(){return rad;};
 	vec3 transformPoint(vec3 pt);
 	bool intersect_ray(Ray& r, float& u,float& v,float& t);
-	vec3 getColor(Ray *ray, vec3 pt, int depth);
-	void setparams(vec3 args,Shade *shade);
+	//vec3 getColor(Scene *scene, Ray *ray, vec3 pt, int depth);
+	void setparams(Shade *shade);
+	vec3 getNormal(vec3 point);
+	//void normalTransform(){};
 };
+
+
 
 class Scene
 {
 public:
 	struct Vertex {
-	double pos[3] ;
+	double pos[3];
 	} ;
 	struct VertexNormal {
-	double pos[3] ;
-	double normal[3] ;
+	double pos[3];
+	double normal[3];
 	} ;
 	
 	Vertex * vert;
@@ -177,7 +192,8 @@ public:
 
 	}
 	
-	
+
 	void parsefile(FILE *fp);
+	bool isVisible(Ray *pointToLight,vec3 lightposition);
 
 };
