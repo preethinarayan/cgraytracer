@@ -25,6 +25,12 @@ bool Light::setvalues(float _position[3],float _values[3], Shade *shading, int t
 		{
 			diffuse = shading->diffuse;
 		}
+
+		if(shading->isEmissionSet)
+		{
+			emission = shading->emission;
+		}
+
 		attenuation = shading->attenuation;
 		spot_direction = shading->spot_direction;
 		spot_cutoff = shading->spot_cutoff;
