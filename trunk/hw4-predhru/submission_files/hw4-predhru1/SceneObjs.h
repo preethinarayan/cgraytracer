@@ -5,6 +5,7 @@
 #include <vector>
 #define vector std::vector
 #define maxVerts 100
+#define maxLight 7
 
 class Ray
 {
@@ -94,7 +95,7 @@ public:
 	vec3 getAmbient(){return ambient;}
 	float spotlight_effect(Light *light, vec3 dir);
 	float calculateAttenuation(vec3 attenuation, float distance);
-	vec3 getColor(Scene *scene,Ray *ray, vec3 pt, int depth,bool seclargest);
+	virtual vec3 getColor(Scene *scene,Ray *ray, vec3 pt, int depth,bool seclargest)=0;
 	//virtual Ray_t getReflectedRay(Ray *R, vec3 pt) = 0;
 	virtual vec3 getReflection(Ray *ray,int depth,bool secLargest,Scene *scene,vec3 pt) = 0;
 	//vec3 getReflection(Ray *ray,int depth,bool secLargest,Scene *scene,vec3 pt);
@@ -139,6 +140,7 @@ public:
 	void setparams(Shade *shade);
 	float area( vec3 v1, vec3 v2, vec3 v3);
 	vec3 getReflection(Ray *ray,int depth,bool secLargest,Scene *scene,vec3 pt);
+	vec3 getColor(Scene *scene,Ray *ray, vec3 pt, int depth,bool seclargest);
 	//void transNorm()
 
 
@@ -163,6 +165,7 @@ public:
 	vec3 getNormal(vec3 point);
 	//void normalTransform(){};
 	vec3 getReflection(Ray *ray,int depth,bool secLargest,Scene *scene,vec3 pt);
+	vec3 getColor(Scene *scene,Ray *ray, vec3 pt, int depth,bool seclargest);
 };
 
 
@@ -195,7 +198,7 @@ public:
 	char outputfile[300];	
 	int width;
 	int height;
-	vector<Light*> lights;
+	Light *lights[maxLight];
 
 	void initScene()
 	{
@@ -216,7 +219,8 @@ public:
 	cameraval[1] = vec3();
 	cameraval[2] = vec3();
 	fov = 0.0;
-
+	for(int i=0;i<maxLight;i++)
+		lights[i] = new Light();
 	}
 	
 

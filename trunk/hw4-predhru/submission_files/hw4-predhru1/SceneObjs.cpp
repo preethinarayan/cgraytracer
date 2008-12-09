@@ -133,7 +133,7 @@ vec3 Sphere::getReflection(Ray *ray,int depth,bool secLargest,Scene *scene,vec3 
 		return vec3(0.0,0.0,0.0);
 
 	vec3 color = vec3(0.0,0.0,0.0);
-	if((this->specular.x != 0.0 || this->specular.y != 0.0 || this->specular.z != 0.0)&&shininess==128)
+	if((this->specular.x != 0.0 || this->specular.y != 0.0 || this->specular.z != 0.0))
 	{
 		vec3 normal=getNormal(pt);
 		vec3 I = pt - ray->begin;
@@ -214,15 +214,17 @@ vec3 Triangle::getReflection(Ray *ray,int depth,bool secLargest,Scene *scene,vec
 	return color;
 }
 
-vec3 SceneObjs::getColor(Scene *scene,Ray *ray, vec3 pt, int depth,bool secLargest)
+vec3 Triangle::getColor(Scene *scene,Ray *ray, vec3 pt, int depth,bool secLargest)
 {
 
 	int visibility=0;
 	vec3 viewer_direction = ray->begin - pt;
+	viewer_direction.normalize();
+
 	vec3 color(0.0,0.0,0.0);
 	Ray pointToLight;
 	pointToLight.begin = pt;
-	for(int k = 0 ; k < scene->lights.size() ; k++)
+	for(int k = 0 ; k < scene->lightnum ; k++)
 	{
 		pointToLight.end = scene->lights[k]->position - pt;
 		pointToLight.end.normalize();
@@ -263,7 +265,7 @@ vec3 SceneObjs::getColor(Scene *scene,Ray *ray, vec3 pt, int depth,bool secLarge
 	//adding visibility
 	color += visibility*color;
 
-	if(scene->lights.size() > 0)
+	if(scene->lightnum > 0)
 	{
 		color += emission + (scene->lights[0]->getGlobalAmbient() * this->ambient);
 	}
@@ -289,6 +291,86 @@ vec3 SceneObjs::getColor(Scene *scene,Ray *ray, vec3 pt, int depth,bool secLarge
 
 	return color;
 }
+
+vec3 Sphere::getColor(Scene *scene,Ray *ray, vec3 pt, int depth,bool secLargest)
+{
+
+	int visibility=0;
+	vec3 color(0.0,0.0,0.0);
+
+	vec3 viewer_direction = ray->begin - pt;
+	viewer_direction.normalize();
+
+	Ray pointToLight;
+	pointToLight.begin = pt;
+	for(int k = 0 ; k < scene->lightnum ; k++)
+	{
+		pointToLight.end = scene->lights[k]->position - pt;
+		pointToLight.end.normalize();
+		pointToLight.begin += 0.1 * pointToLight.end;
+		
+		//check visibility
+		if(scene->isVisible(&pointToLight,scene->lights[k]->position))
+		{
+			visibility = 1;
+		}
+		
+		//applying the equation
+		vec3 N = getNormal(pt);
+		vec3 L = pointToLight.end;
+		
+		vec3 light_specular = scene->lights[k]->specular;
+		vec3 light_diffuse = scene->lights[k]->diffuse;
+		vec3 light_ambient = scene->lights[k]->ambient;
+		vec3 attenuation = scene->lights[k]->attenuation;
+		vec3 dir = pt - scene->lights[k]->position;
+		
+		// distance between light source and vertex
+		float distance = dir.norm();
+
+		float specularfactor;
+		float diffusefactor = dot(diffusefactor,L,N);
+		vec3 R = -L + (2 * diffusefactor * N);
+		float tempdiff = dot(tempdiff,R,viewer_direction);
+		specularfactor = max(tempdiff,0.0);
+		specularfactor = pow(specularfactor,shininess);
+		diffusefactor = max(diffusefactor,0.0);
+
+		//applying the model equation
+		color = (calculateAttenuation(attenuation,distance) * spotlight_effect(scene->lights[k],dir)) * ((light_ambient * this->ambient) + (specularfactor * light_specular * this->specular) + (diffusefactor * light_diffuse * this->diffuse));
+//		printf("Color is %f %f %f\n",color.x,color.y,color.z);
+	}
+	
+	//adding visibility
+	color += visibility*color;
+
+	if(scene->lightnum > 0)
+	{
+		color += emission + (scene->lights[0]->getGlobalAmbient() * this->ambient);
+	}
+	else
+	{
+		color += emission + this->ambient;
+	}
+
+	/*  reflection       */
+
+	color += getReflection(ray,depth,secLargest,scene,pt);
+
+	//printf("The color value is : %f %f %f \n",color.x,color.y,color.z);
+	color.x *= 255.0;
+	color.y *= 255.0;
+	color.z *= 255.0;
+	if(color.x>255.0)
+		color.x=255.0;
+	if(color.y>255.0)
+		color.y=255.0;
+	if(color.z>255.0)
+		color.z=255.0;
+
+	return color;
+}
+
 
 void Sphere::setparams(Shade *shade)
 {
@@ -1093,7 +1175,7 @@ void Scene::parsefile (FILE *fp) {
 	 //int mylight = GL_LIGHT0 + lightnum ;
 	 light = new Light();
 	 light->setvalues(direction,color,shading,0);
-	 lights.push_back(light);
+	 lights[lightnum] = light;
 	 ++lightnum ;
        }
 
@@ -1105,7 +1187,7 @@ void Scene::parsefile (FILE *fp) {
 	 //int mylight = GL_LIGHT0 + lightnum ;
 	 Light *light = new Light();
 	 light->setvalues(direction,color,shading,1);
-	 lights.push_back(light);
+	 lights[lightnum] = light;
 	 ++lightnum ;	 
        }
 
