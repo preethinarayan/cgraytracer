@@ -1,4 +1,4 @@
-#pragma once
+
 #include "SceneObjs.h"
 #include "Image.h"
 #include "string.h"
@@ -9,11 +9,14 @@
 #define EP 0.000001
 #define TEST_CULL 1
 #define INF 1000000
+#define pi 3.1428571
+#define RECURSION_DEPTH 0
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 
 Transformation *transform=new Transformation();
 Shade *shading = new Shade();
 Light *light;
+CameraRay *camera;
 
 void SceneObjs::convertRayToHomogenous(Ray &ray, RayHomo &rhomo)
 {
@@ -25,7 +28,7 @@ void SceneObjs::convertRayToHomogenous(Ray &ray, RayHomo &rhomo)
 	rhomo.end.x=ray.end.x;
 	rhomo.end.y=ray.end.y;
 	rhomo.end.z=ray.end.z;
-	rhomo.end.w=1.0;
+	rhomo.end.w=0.0;
 
 	return;
 }
@@ -124,14 +127,103 @@ vec3 Sphere::getNormal(vec3 point)
 	return normal;
 }
 
-vec3 SceneObjs::getColor(Scene *scene,Ray *ray, vec3 pt, int depth)
+vec3 Sphere::getReflection(Ray *ray,int depth,bool secLargest,Scene *scene,vec3 pt)
 {
+	if(depth == scene->maxdepth)
+		return vec3(0.0,0.0,0.0);
+
+	vec3 color = vec3(0.0,0.0,0.0);
+	if((this->specular.x != 0.0 || this->specular.y != 0.0 || this->specular.z != 0.0)&&shininess==128)
+	{
+		vec3 normal=getNormal(pt);
+		vec3 I = pt - ray->begin;
+		I.normalize();
+		float dotproduct = dot(dotproduct,I,normal);
+		//vec3 R = ray->end-2.0f*dotproduct*normal;
+		vec3 R = -2*dotproduct*normal + I;
+		R.normalize();
+
+		Ray reflected;
+		reflected.begin = pt;
+		//reflected.end = R;
+		reflected.begin += 0.1*reflected.end;
+		reflected.end = R;
+		//reflected.begin = pt + 0.1*reflected.end;
+
+		if(depth<scene->maxdepth)
+		{
+			vec3 tempcolor = camera->getRayIntersection(&reflected,depth++,false,scene);
+			tempcolor = tempcolor / 255.0;
+			color += tempcolor * this->specular;
+			//printf("The color in reflection is %f %f %f\n",color.x,color.y,color.z);
+		}
+	}
+	return color;
+}
+
+//void Triangle::transNorm()
+//{
+//	if(hasNormals)
+//	{
+//		mat4 M, transpM;
+//		M=invert(M, transform);
+//		transpM=transpose(transpM, M);
+//		vec4 n;
+//		/* normal transformations : n_trans = (inv(M))'.n */
+//		for(int i=0; i<3; i++)
+//		{
+//			n=getHomogenous(norms[i]);
+//			n=transpM*n;
+//			norms[i]=getDehomogenous(n);
+//		}
+//	}
+//}
+
+vec3 Triangle::getReflection(Ray *ray,int depth,bool secLargest,Scene *scene,vec3 pt)
+{
+	
+	if(depth == scene->maxdepth)
+		return vec3(0.0,0.0,0.0);
+
+	vec3 color = vec3(0.0,0.0,0.0);
+	if(this->specular.x > 0.0 || this->specular.y >0.0 || this->specular.z >0.0)
+	{
+		vec3 normal=getNormal(pt);
+		vec3 I = pt - ray->begin;
+		I.normalize();
+		//float dotproduct = dot(dotproduct,I,normal);
+		//vec3 R = ray->end-2.0f*dotproduct*normal;
+		vec3 R = -2*(I*normal)*normal + I;
+		R.normalize();
+
+		Ray reflected;
+		reflected.begin = pt;
+		reflected.end = R;
+		reflected.begin += 0.1*reflected.end;
+		//reflected.end = R;
+		//reflected.begin = pt + 0.1*reflected.end;
+
+		if(depth<scene->maxdepth)
+		{
+			vec3 tempcolor = camera->getRayIntersection(&reflected, depth++ ,false,scene);
+			//tempcolor = tempcolor / 255.0;
+			color += tempcolor * this->specular;
+			//printf("The color in reflection is %f %f %f\n",color.x,color.y,color.z);
+		}
+	}
+	return color;
+}
+
+vec3 SceneObjs::getColor(Scene *scene,Ray *ray, vec3 pt, int depth,bool secLargest)
+{
+
 	int visibility=0;
 	vec3 viewer_direction = ray->begin - pt;
 	vec3 color(0.0,0.0,0.0);
 	Ray pointToLight;
 	pointToLight.begin = pt;
-	for(int k = 0 ; k < scene->lights.size() ; k++){
+	for(int k = 0 ; k < scene->lights.size() ; k++)
+	{
 		pointToLight.end = scene->lights[k]->position - pt;
 		pointToLight.end.normalize();
 		pointToLight.begin += 0.1 * pointToLight.end;
@@ -150,11 +242,11 @@ vec3 SceneObjs::getColor(Scene *scene,Ray *ray, vec3 pt, int depth)
 		vec3 light_ambient = scene->lights[k]->ambient;
 
 		vec3 dir = pt - scene->lights[k]->position;
+		
 		// distance between light source and vertex
 		float distance = dir.norm();
 		vec3 attenuation = scene->lights[k]->attenuation;
 
-		//vec3 reflection_direction;
 		float specularfactor;
 		float diffusefactor = dot(diffusefactor,L,N);
 		vec3 R = -L + (2 * diffusefactor * N);
@@ -162,8 +254,10 @@ vec3 SceneObjs::getColor(Scene *scene,Ray *ray, vec3 pt, int depth)
 		specularfactor = max(tempdiff,0.0);
 		specularfactor = pow(specularfactor,shininess);
 		diffusefactor = max(diffusefactor,0.0);
-	
+
+		//applying the model equation
 		color = (calculateAttenuation(attenuation,distance) * spotlight_effect(scene->lights[k],dir)) * ((light_ambient * this->ambient) + (specularfactor * light_specular * this->specular) + (diffusefactor * light_diffuse * this->diffuse));
+//		printf("Color is %f %f %f\n",color.x,color.y,color.z);
 	}
 	
 	//adding visibility
@@ -177,6 +271,11 @@ vec3 SceneObjs::getColor(Scene *scene,Ray *ray, vec3 pt, int depth)
 	{
 		color += emission + this->ambient;
 	}
+
+	/*  reflection       */
+
+	color += getReflection(ray,depth,secLargest,scene,pt);
+
 	//printf("The color value is : %f %f %f \n",color.x,color.y,color.z);
 	color.x *= 255.0;
 	color.y *= 255.0;
@@ -187,6 +286,7 @@ vec3 SceneObjs::getColor(Scene *scene,Ray *ray, vec3 pt, int depth)
 		color.y=255.0;
 	if(color.z>255.0)
 		color.z=255.0;
+
 	return color;
 }
 
@@ -213,6 +313,9 @@ Triangle::Triangle()
 	vertices[0] = vec3(0.0,0.0,0.0);
 	vertices[1] = vec3(0.0,0.0,0.0);
 	vertices[2] = vec3(0.0,0.0,0.0);
+	norms[0] = vec3(0.0,0.0,0.0);
+	norms[1] = vec3(0.0,0.0,0.0);
+	norms[2] = vec3(0.0,0.0,0.0);
 	transformation=transform->getTransform(); 
 }
 
@@ -223,6 +326,7 @@ Triangle::Triangle(vec3 v1, vec3 v2, vec3 v3)
 	vertices[2] = v3;
 	transformation=transform->getTransform(); 
 }
+
 vec3 Triangle::transformPoint(vec3 pt)
 {
 	vec4 v=getHomogenous(pt);
@@ -312,7 +416,7 @@ float SceneObjs::spotlight_effect(Light *light,vec3 dir)
 	
 	c = dot(dir,light->spot_direction);
 	// If the vertex is outside the spotlight
-	if(c < cosf(((3.142/180.0) * light->spot_cutoff)))
+	if(c < cosf(((pi/180.0) * light->spot_cutoff)))
 	{
 		return 0.0;
 	}
@@ -358,6 +462,153 @@ bool Scene::isVisible(Ray *pointToLight,vec3 lightposition)
 	// visible
 	return true;
 }
+
+
+
+CameraRay::CameraRay()
+	{
+		u = vec3(0,0,0);
+		w = vec3(0,0,0);
+		v = vec3(0,0,0);
+		fov = 0.0;
+	}
+
+bool CameraRay::Intersection(Ray *ray, vec3 *pt, bool secLargest,Scene *scene)
+{
+	float u,v,t;	/* parameter of inte
+
+//CameraRayrsection */
+	int min_primitive = -1;
+	float min_t = INF;
+	float sec_min_t = INF;
+	int sec_min_primitive = -1;
+	mat4 M;
+	bool intersect = false;
+	int  i=0;
+	//printf("Number of objects : %d\n",scene->sobjects.size());
+	for(int k=0; k<scene->sobjects.size(); k++)
+	{
+		intersect = scene->sobjects[k]->intersect_ray(*(ray),u,v,t);
+		if(t>0 && t<min_t)
+		{
+			sec_min_t=min_t;
+			sec_min_primitive = min_primitive;
+
+			min_t=t;
+			min_primitive = k;
+		}
+	}
+	scene->currIntersectionObj = min_primitive;
+	if(min_t!=INF)
+	{
+		//objs[scene->currIntersectionObj]->transformNormal();
+		
+		*pt = ray->begin + min_t*ray->end;
+		//printf("Point before transform : %f %f %f\n",(*pt).x,(*pt).y,(*pt).z);
+		*pt = scene->sobjects[scene->currIntersectionObj]->transformPoint(*pt);
+		//printf("Point after transform : %f %f %f\n",(*pt).x,(*pt).y,(*pt).z);
+		return true;		
+	}
+	if(secLargest && sec_min_t !=INF)
+	{
+		scene->currIntersectionObj = sec_min_primitive;
+		//scene->sobjects[scene->currIntersectionObj]->transformNormal();
+		*pt = ray->begin + sec_min_t*ray->end;
+		//*pt = objs[currIntersectionObj]->transformPoint(*pt);
+		return true;		
+	}	
+	return false;
+}
+
+vec3 CameraRay::getRayIntersection(Ray *ray,int depth, bool secLargest,Scene *scene)
+{
+	vec3 color(0.0, 0.0, 0.0);
+	vec3 point;
+	if(Intersection(ray, &point, secLargest,scene))
+	{	
+		color = scene->sobjects[scene->currIntersectionObj]->getColor(scene,ray, point, depth,secLargest);
+		//printf("Color in intersection is: %f %f %f\n",color.x,color.y,color.z);
+	}
+	return color;
+	
+}
+
+CameraRay::CameraRay(vec3 _eye, vec3 _center, vec3 _up, float _fov)
+	{
+		eye = _eye;
+		up = _up;
+		center = _center;
+		w = eye - center;
+		printf("w is : %f %f %f\n",w.x,w.y,w.z);
+		w.normalize();
+		u = cross(u,up,w);
+		u.normalize();
+		printf("u is : %f %f %f\n",u.x,u.y,u.z);
+		v = cross(v,w,u);
+		printf("v is : %f %f %f\n",v.x,v.y,v.z);
+		fov = _fov;
+		printf("eye is : %f %f %f\n",eye.x,eye.y,eye.z);
+	}
+
+vec3 CameraRay::calcRays(Scene *scene,int i, int j)
+{
+	vec3 ray;
+	float A;
+	float B;
+
+	float fovy=fov;
+	float fovx=fovy*float(float(scene->width)/float(scene->height));
+	
+	A = tanf((pi / 180) * (fovx/2.0)) * ((j - (scene->width/2.0))/(scene->width/2.0));
+	B = tanf((pi / 180) * (fovy/2.0)) * ((scene->height/2.0) - i)/ (scene->height/2.0);
+
+	ray = (A * u) + (B * v) - w;
+	ray.normalize();
+
+	return ray;
+}
+
+void CameraRay::generateRays(Scene *scene)
+{
+	vec3 pt;
+	ray.begin = eye;
+	printf("eye is %f, %f, %f\n", eye.x, eye.y, eye.z); 
+	int flag=0;
+	float u,v,t;
+	Image img;
+	img.setSize(scene->width,scene->height);
+	//float remainingtime = 0;
+	//float totaltime = I->getHeight() + I->getWidth();
+	//float percentremaining;
+	
+	for(int i=0; i<scene->height; i++)
+	{
+		//printf("\nRow %d\n", i);
+		for(int j=0; j<scene->width; j++)
+		{
+			flag=0;
+			vec3 color(0.0, 0.0, 0.0);
+			ray.end = calcRays(scene,i,j);
+			
+			
+			color = getRayIntersection(&ray, RECURSION_DEPTH, false,scene);
+			img.setPixel(i,j,color.x,color.y,color.z);
+			/*if(Intersection(&myR, &pt))
+			{ 
+				color = FindColor(pt, RECURSION_DEPTH);
+			}*/
+			//I->setPixel(i, j, color.x, color.y, color.z);
+			//remainingtime += 1;
+			//percentremaining = (remainingtime / totaltime) * 100;
+			//system("cls");
+			//printf("Progress: %0.3f", percentremaining); 
+		}
+	}
+
+	img.writeImage(scene->outputfile);
+}
+
+
 
 /********************Intersections**************************/
 
@@ -479,6 +730,7 @@ bool Sphere::intersect_ray(Ray &ray,float &u,float &v, float &t)
 	raytrans2.end=raytrans.end;
 	vec3 dis = raytrans.begin-getCenter();
 
+	raytrans.end.normalize();
 	float temp = dot(temp, dis, dis);
 
 	float a = dot(a,raytrans.end, raytrans.end);
@@ -575,10 +827,13 @@ bool Triangle::intersect_ray(Ray& ray, float& u, float& v, float& t)
 	float sum = al+be+ga;
 
 	if(sum <= 1.0001 && sum >= 0.9999)
-		return t;
+		return true;
 	else 
-		return -1;
-//
+	{
+		t=-1;
+		return false;
+	}
+
 //	pvec = cross(pvec,raytrans.end,edge2);
 //	float det = dot(det,edge1,pvec);
 //
@@ -590,7 +845,7 @@ bool Triangle::intersect_ray(Ray& ray, float& u, float& v, float& t)
 //	tvec = subt(raytrans.begin,v1);
 //	u = dot(u,tvec,pvec);
 //
-//	if(u < 0 || u > det)
+//	if(u > det)
 //		return false;
 //
 //	qvec = cross(qvec,tvec,edge1);
@@ -623,10 +878,8 @@ bool Triangle::intersect_ray(Ray& ray, float& u, float& v, float& t)
 //
 //	t = dot(t,edge2,qvec) * (1.0/det);
 //#endif
-//
-//	return true;
 
-	// Find the normal
+	//return true;
 	
 }
 
@@ -664,6 +917,7 @@ void Scene::parsefile (FILE *fp) {
 	  assert(!strcmp(command, "maxdepth")) ;
 	  fprintf(stderr, "Maxdepth set to %d but irrelevant for OpenGL\n", 
 		  maxdepth) ;
+	  printf("maxdepth is %d\n",maxdepth);
 	}
 
        else if (!strcmp(command, "output")) {
@@ -698,7 +952,7 @@ void Scene::parsefile (FILE *fp) {
 	cameraval[1] = vec3(lookat[0],lookat[1],lookat[2]);
 	cameraval[2] = vec3(up[0],up[1],up[2]);
 	fov = fovxy;
-	
+	camera = new CameraRay(cameraval[0],cameraval[1],cameraval[2],fov);
 	printf("camera vals are %f %f %f , %f %f %f, %f %f %f and fov %f\n",cameraval[0].x,cameraval[0].y,cameraval[0].z,cameraval[1].x,cameraval[1].y,cameraval[1].z,cameraval[2].x,cameraval[2].y,cameraval[2].z,fov);
 	}
 	
@@ -737,12 +991,21 @@ void Scene::parsefile (FILE *fp) {
 	  vert[curvert] = v ;
 	  ++curvert ;
 	}
-	  //Quadrilateral q = Quadrilateral(vert[0],vert[1],vert[2],vert[3]);	
-	  //qlist[quadcount]=q;
-	  //quadcount++;
-	  //qflag=1;
 	  
-		
+	else if (!strcmp(command, "vertexnormal")) {  
+	  // Add a vertex to the stack with a normal
+	  assert(maxvertnorms) ; assert(curvertnorm < maxvertnorms) ;
+	  VertexNormal vn ;
+
+	  int num = sscanf(line, "%s %lf %lf %lf %lf %lf %lf", 
+		  command, vn.pos, vn.pos+1, vn.pos+2, 
+		  vn.normal, vn.normal+1, vn.normal+2) ;
+
+	  assert(num == 7) ; assert(!strcmp(command,"vertexnormal")) ;
+	  vertnorm[curvertnorm] = vn ;
+	  ++curvertnorm ;
+	}		
+
 	else if (!strcmp(command, "tri")) { // Triangle from 3 vertices
 	 int pts[3] ; 
 	 int num = sscanf(line, "%s %d %d %d", command, pts, pts+1, pts+2) ;
@@ -829,8 +1092,8 @@ void Scene::parsefile (FILE *fp) {
 
 	 //int mylight = GL_LIGHT0 + lightnum ;
 	 light = new Light();
-	 lights.push_back(light);
 	 light->setvalues(direction,color,shading,0);
+	 lights.push_back(light);
 	 ++lightnum ;
        }
 
@@ -841,25 +1104,19 @@ void Scene::parsefile (FILE *fp) {
 	 assert(lightnum >= 0 && lightnum < 7) ;
 	 //int mylight = GL_LIGHT0 + lightnum ;
 	 Light *light = new Light();
-	 lights.push_back(light);
 	 light->setvalues(direction,color,shading,1);
+	 lights.push_back(light);
 	 ++lightnum ;	 
        }
 
      else if (!strcmp(command, "attenuation")) {
-	   float arg[6];			
-       int num = sscanf(line, "%s %lf %lf %lf", command, arg, arg + 1, arg +2) ;
+		 float attval[6]={0.0,0.0,0.0,0.0,0.0,0.0};			
+       int num = sscanf(line, "%s %f %f %f", command, &attval[0],&attval[1],&attval[2]) ;
        assert(num == 4) ;
        assert(!strcmp(command, "attenuation")) ;
 		if(!shading)
 		   shading = new Shade();
-		else
-			if(shading->isAmbientSet)
-		   {
-			   delete shading;
-			   shading = new Shade();
-		   }
-		shading->setvalues(arg,5);
+		shading->setvalues(attval,5);
      }
 
      else if (!strcmp(command, "ambient")) {
@@ -941,9 +1198,20 @@ void Scene::parsefile (FILE *fp) {
 		   }
 		   shading->setvalues(args,3);
      }
+
+	 else if (!strcmp(command, "spot")) {
+       float args[6];
+       int num = sscanf(line, "%s %f %f %f %f %f", command, args, args + 1, args +2,args +3,args +4) ;
+       assert(num == 6) ; assert (!strcmp(command, "spot")) ;
+       if(!shading)
+		   shading = new Shade();
+	   shading->setvalues(args,6);
+     }
+
 	count++;
 	}
 	totalobjcount = spherecount+trianglecount+quadcount;
 
+	camera->generateRays(this);
 }
 

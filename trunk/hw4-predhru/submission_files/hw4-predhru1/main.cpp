@@ -1,14 +1,13 @@
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
-#include "Camera.h"
+#include "SceneObjs.h"
 #include "Transform.h"
 #include <stdio.h>
 #include <math.h>
 
 
 char *filename;
-CameraRay *camera;
 
 void sleep(unsigned int mseconds)
 {
@@ -76,8 +75,8 @@ void init()
 	scene->initScene();
 	scene->parsefile(inputfile);
 	printf("After parse file\n");
-	camera = new CameraRay(scene->cameraval[0],scene->cameraval[1],scene->cameraval[2],scene->fov);
-	camera->generateRays(scene);
+	//camera = new CameraRay(scene->cameraval[0],scene->cameraval[1],scene->cameraval[2],scene->fov);
+	//camera->generateRays(scene);
 	printf("After generate rays\n");
 }
 

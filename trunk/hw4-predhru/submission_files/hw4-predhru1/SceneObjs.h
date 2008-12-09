@@ -1,8 +1,10 @@
 #include "nv/nv_math.h"
 #include "nv/nv_algebra.h"
+#include <math.h>
 #include "Light.h"
 #include <vector>
 #define vector std::vector
+#define maxVerts 100
 
 class Ray
 {
@@ -21,6 +23,28 @@ public:
 };
 
 class Scene;
+
+class CameraRay
+{
+private:
+	vec3 u,v,w;
+	
+	float fov;
+
+public:
+	vec3 eye;
+	vec3 center;
+	vec3 up;
+	CameraRay();
+	CameraRay(vec3 eye, vec3 center, vec3 up, float _fov);
+	vec3 calcRays(Scene *scene,int i,int j);
+	vec3 getEye(){return eye;}
+	Ray ray;
+	void generateRays(Scene *scene);
+	vec3 getRayIntersection(Ray *ray,int depth, bool secLargest,Scene *scene);
+	bool Intersection(Ray *R, vec3 *pt, bool secLargest,Scene *scene);
+};
+
 class SceneObjs
 {
 protected:
@@ -60,23 +84,20 @@ public:
 //	
 	Ray inverseTransformRay(Ray &ray, Ray &rtrans, mat4 M);
 //	Ray *TransformRay(Ray *R, Ray *R_trans, mat4 M);
-//	float getRayPlaneIntersection(vec3 v[3], Ray *R);
 	void convertRayToHomogenous(Ray &ray, RayHomo &rtrans);
 	vec4 getHomogenous(vec3 v);
 	vec3 getDehomogenous(vec4 v);
 	virtual bool intersect_ray(Ray &ray,float &u,float &v, float &t)=0;
 	virtual vec3 transformPoint(vec3 pt)=0;
 	/* lighting routines */
-	/*virtual vec3 getLiteColor(Light *light, vec3 light_direction,vec3 viewer_direction, vec3 pt) = 0;*/
 	vec3 getEmission(){return emission;}
 	vec3 getAmbient(){return ambient;}
-	/*vec3 calcIllumination(Light *light, vec3 normal, vec3 light_direction, vec3 viewer_direction, vec3 pt);*/
 	float spotlight_effect(Light *light, vec3 dir);
 	float calculateAttenuation(vec3 attenuation, float distance);
-	vec3 getColor(Scene *scene,Ray *ray, vec3 pt, int depth);
+	vec3 getColor(Scene *scene,Ray *ray, vec3 pt, int depth,bool seclargest);
 	//virtual Ray_t getReflectedRay(Ray *R, vec3 pt) = 0;
-	//virtual vec3 getReflections(Ray *R, vec3 pt, int depth) = 0;
-
+	virtual vec3 getReflection(Ray *ray,int depth,bool secLargest,Scene *scene,vec3 pt) = 0;
+	//vec3 getReflection(Ray *ray,int depth,bool secLargest,Scene *scene,vec3 pt);
 };
 
 
@@ -101,10 +122,12 @@ class Triangle : public SceneObjs
 {
 private:
 	vec3 vertices[3];
+	vec3 norms[3];
 	mat4 transformation;
 public:
 	Triangle();
 	Triangle(vec3 v1, vec3 v2, vec3 v3);
+	//void setNormals(vec3 n1, vec3 n2, vec3 n3);
 	vec3 getVertex1(){return vertices[0];};
 	vec3 getVertex2(){return vertices[1];};
 	vec3 getVertex3(){return vertices[2];};
@@ -115,6 +138,9 @@ public:
 	//void normalTransform(){};
 	void setparams(Shade *shade);
 	float area( vec3 v1, vec3 v2, vec3 v3);
+	vec3 getReflection(Ray *ray,int depth,bool secLargest,Scene *scene,vec3 pt);
+	//void transNorm()
+
 
 };
 
@@ -136,6 +162,7 @@ public:
 	void setparams(Shade *shade);
 	vec3 getNormal(vec3 point);
 	//void normalTransform(){};
+	vec3 getReflection(Ray *ray,int depth,bool secLargest,Scene *scene,vec3 pt);
 };
 
 
