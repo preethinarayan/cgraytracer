@@ -7,8 +7,8 @@
 
 #include <stdlib.h>
 
-#define WIDTH 640
-#define HEIGHT 480
+//#define WIDTH 640
+//#define HEIGHT 480
 
 
 
@@ -25,7 +25,7 @@ public:
 	vec3 up;
 	CameraRay();
 	CameraRay(vec3 eye, vec3 center, vec3 up, float _fov);
-	vec3 calcRays(int i,int j);
+	vec3 calcRays(Scene *scene,int i,int j);
 	vec3 getEye(){return eye;}
 	Ray ray;
 	void generateRays(Scene *scene);

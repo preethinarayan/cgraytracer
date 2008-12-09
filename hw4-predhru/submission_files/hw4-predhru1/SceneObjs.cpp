@@ -1,3 +1,4 @@
+#pragma once
 #include "SceneObjs.h"
 #include "Image.h"
 #include "string.h"
@@ -7,9 +8,12 @@
 #include "Transformation.h"
 #define EP 0.000001
 #define TEST_CULL 1
+#define INF 1000000
+#define max(a,b) (((a) > (b)) ? (a) : (b))
 
 Transformation *transform=new Transformation();
 Shade *shading = new Shade();
+Light *light;
 
 void SceneObjs::convertRayToHomogenous(Ray &ray, RayHomo &rhomo)
 {
@@ -84,12 +88,12 @@ vec3 Quadrilateral::transformPoint(vec3 pt)
 	v=transformation*v;
 	return getDehomogenous(v);
 }
-
-vec3 Quadrilateral::getColor(Ray *ray, vec3 pt, int depth)
+/*
+vec3 Quadrilateral::getColor(Scene *scene,Ray *ray, vec3 pt, int depth)
 {
 	vec3 color(0.0,0.0,0.0);
 	return color;
-}
+}*/
 
 //Sphere
 Sphere::Sphere()
@@ -112,14 +116,84 @@ vec3 Sphere::transformPoint(vec3 pt)
 	return getDehomogenous(v);
 }
 
-vec3 Sphere::getColor(Ray *ray, vec3 pt, int depth)
+vec3 Sphere::getNormal(vec3 point)
 {
-	vec3 color(0.0,0.0,255.0);
+	vec3 normal = point - getCenter();
+	normal.normalize();
+	normal = TransformNormal(transformation, normal);
+	return normal;
+}
+
+vec3 SceneObjs::getColor(Scene *scene,Ray *ray, vec3 pt, int depth)
+{
+	int visibility=0;
+	vec3 viewer_direction = ray->begin - pt;
+	vec3 color(0.0,0.0,0.0);
+	Ray pointToLight;
+	pointToLight.begin = pt;
+	for(int k = 0 ; k < scene->lights.size() ; k++){
+		pointToLight.end = scene->lights[k]->position - pt;
+		pointToLight.end.normalize();
+		pointToLight.begin += 0.1 * pointToLight.end;
+		
+		//check visibility
+		if(scene->isVisible(&pointToLight,scene->lights[k]->position))
+		{
+			visibility = 1;
+		}
+		
+		//applying the equation
+		vec3 N = getNormal(pt);
+		vec3 L = pointToLight.end;
+		vec3 light_specular = scene->lights[k]->specular;
+		vec3 light_diffuse = scene->lights[k]->diffuse;
+		vec3 light_ambient = scene->lights[k]->ambient;
+
+		vec3 dir = pt - scene->lights[k]->position;
+		// distance between light source and vertex
+		float distance = dir.norm();
+		vec3 attenuation = scene->lights[k]->attenuation;
+
+		//vec3 reflection_direction;
+		float specularfactor;
+		float diffusefactor = dot(diffusefactor,L,N);
+		vec3 R = -L + (2 * diffusefactor * N);
+		float tempdiff = dot(tempdiff,R,viewer_direction);
+		specularfactor = max(tempdiff,0.0);
+		specularfactor = pow(specularfactor,shininess);
+		diffusefactor = max(diffusefactor,0.0);
+	
+		color = (calculateAttenuation(attenuation,distance) * spotlight_effect(scene->lights[k],dir)) * ((light_ambient * this->ambient) + (specularfactor * light_specular * this->specular) + (diffusefactor * light_diffuse * this->diffuse));
+	}
+	
+	//adding visibility
+	color += visibility*color;
+
+	if(scene->lights.size() > 0)
+	{
+		color += emission + (scene->lights[0]->getGlobalAmbient() * this->ambient);
+	}
+	else
+	{
+		color += emission + this->ambient;
+	}
+	//printf("The color value is : %f %f %f \n",color.x,color.y,color.z);
+	color.x *= 255.0;
+	color.y *= 255.0;
+	color.z *= 255.0;
+	if(color.x>255.0)
+		color.x=255.0;
+	if(color.y>255.0)
+		color.y=255.0;
+	if(color.z>255.0)
+		color.z=255.0;
 	return color;
 }
 
-void Sphere::setparams(vec3 args,Shade *shade)
+void Sphere::setparams(Shade *shade)
 {
+	if(shade)
+	{
 	if(shade->isAmbientSet)
 		ambient = shade->ambient;
 	if(shade->isDiffuseSet)
@@ -130,7 +204,7 @@ void Sphere::setparams(vec3 args,Shade *shade)
 		specular = shade->specular;
 	if(shade->isShininessSet)
 		shininess = shade->shininess;
-
+	}
 }
 
 //Triangle
@@ -156,20 +230,48 @@ vec3 Triangle::transformPoint(vec3 pt)
 	return getDehomogenous(v);
 }
 
-vec3 Triangle::getColor(Ray *ray, vec3 pt, int depth)
+vec3 Triangle::getNormal(vec3 point)
 {
-	vec3 color(0.0,0.0,0.0);
+	vec3 A = vertices[0];
+	vec3 B = vertices[1];
+	vec3 C = vertices[2];
+
+	vec3 e1 = A - B;
+	vec3 e2 = C - B;
+	vec3 normal = cross(normal,e1,e2);
+	normal.normalize();
+
+	normal=TransformNormal(transformation, normal);
+
+	return normal;
+}
+
+vec3 SceneObjs::TransformNormal(mat4 trans, vec3 normal)
+{
+	mat4 M, transM;
+	M=invert(M, trans);
+	transM=transpose(transM, M);
+	vec4 ntrans = getHomogenous(normal);
+	ntrans = transM*ntrans;
+	return(getDehomogenous(ntrans));
+}
+
+/*vec3 Triangle::getColor(Scene* scene,Ray *ray, vec3 pt, int depth)
+{
+	vec3 color(255.0,0.0,0.0);
 	
 	return color;
-}
+}*/
 
 vec3 subt(vec3 v1, vec3 v2)
 {
 	return (v1 - v2);
 }
 
-void Triangle::setparams(vec3 args, Shade *shade)
+void Triangle::setparams(Shade *shade)
 {
+	if(shade)
+	{
 	if(shade->isAmbientSet)
 		ambient = shade->ambient;
 	if(shade->isDiffuseSet)
@@ -180,6 +282,7 @@ void Triangle::setparams(vec3 args, Shade *shade)
 		specular = shade->specular;
 	if(shade->isShininessSet)
 		shininess = shade->shininess;
+	}	
 
 }
 
@@ -188,6 +291,73 @@ vec4 SceneObjs::getHomogenous(vec3 v)
 
 vec3 SceneObjs::getDehomogenous(vec4 v)
 { return vec3(v.x/v.w, v.y/v.w, v.z/v.w); }
+
+float SceneObjs::calculateAttenuation(vec3 attenuation, float distance)
+{
+	float value;
+	value = 1.0/(attenuation.x + (attenuation.y * distance) + (attenuation.z * distance * distance));
+	return value;
+}
+
+float SceneObjs::spotlight_effect(Light *light,vec3 dir)
+{
+	// If the spot light is actually not a spot light ;)
+	if(light->spot_cutoff >= 180.0)
+	{
+		return 1.0;
+	}
+	float c;
+	dir.normalize();
+	light->spot_direction.normalize();
+	
+	c = dot(dir,light->spot_direction);
+	// If the vertex is outside the spotlight
+	if(c < cosf(((3.142/180.0) * light->spot_cutoff)))
+	{
+		return 0.0;
+	}
+	c = max(c,0.0);
+	c = pow(c, light->spot_exponent);
+	return c;
+}
+
+bool Scene::isVisible(Ray *pointToLight,vec3 lightposition)
+{
+	float t,u,v;
+	float mint = INF;
+	vec3 pt;
+	vec3 lightdirection;
+	vec3 check;
+	float visible;
+	for(int i = 0 ; i < sobjects.size(); i++)
+	{
+			sobjects[i]->intersect_ray((*pointToLight),u,v,t);
+			if(t > 0 && t < mint)
+			{
+				mint=t;
+
+			}
+	}
+	if(mint!=INF)
+	{
+		pt = pointToLight->begin + (mint * pointToLight->end);
+		lightdirection = lightposition - pt;
+		lightdirection.normalize();
+		visible = dot(visible,lightdirection,pointToLight->end);
+
+		//check visibility
+		if(visible <= 0)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	}
+	// visible
+	return true;
+}
 
 /********************Intersections**************************/
 
@@ -356,11 +526,18 @@ bool Sphere::intersect_ray(Ray &ray,float &u,float &v, float &t)
     }
 }
 
+float Triangle::area( vec3 v1, vec3 v2, vec3 v3)
+{
+	vec3 v;
+	v = cross(v, (v2-v1), (v3-v1));
+
+	return(v.norm()/2);
+}
 
 bool Triangle::intersect_ray(Ray& ray, float& u, float& v, float& t)
 {
-	vec3 pvec,tvec,qvec;
-
+//	vec3 pvec,tvec,qvec;
+	
 	//get vertices of triangle
 	vec3 v1 = getVertex1();
 	vec3 v2 = getVertex2();
@@ -373,53 +550,84 @@ bool Triangle::intersect_ray(Ray& ray, float& u, float& v, float& t)
 
 	Ray raytrans;
 	inverseTransformRay(ray, raytrans, transformation);
+	vec3 normal;
+	normal = cross(normal,edge2,edge1);
+	normal.normalize();
 
-	pvec = cross(pvec,raytrans.end,edge2);
-	float det = dot(det,edge1,pvec);
+	float v1normal;
+	float begnormal;
+	float endnormal;
 
-#ifdef TEST_CULL
-	if(det < EP)
-		return false;
+	v1normal = dot(v1normal,v1,normal);
+	begnormal = dot(begnormal,ray.begin,normal);
+	endnormal = dot(endnormal,ray.end,normal);
+
+	t = (v1normal - begnormal)/endnormal;
+	vec3 pt = raytrans.begin + t*raytrans.end;
+	float area1 = area(v1, v2, v3);
+	float area2 = area(v2, v3, pt);
+	float area3 = area(v3, v1, pt);
+	float area4 = area(v1,v2,pt);
+
+	float al = area2/area1;
+	float be = area3/area1;
+	float ga = area4/area1;
+	float sum = al+be+ga;
+
+	if(sum <= 1.0001 && sum >= 0.9999)
+		return t;
+	else 
+		return -1;
+//
+//	pvec = cross(pvec,raytrans.end,edge2);
+//	float det = dot(det,edge1,pvec);
+//
+//#ifdef TEST_CULL
+//	if(det < EP)
+//		return false;
+//	
+//	//calculate distance from vertex1 to ray
+//	tvec = subt(raytrans.begin,v1);
+//	u = dot(u,tvec,pvec);
+//
+//	if(u < 0 || u > det)
+//		return false;
+//
+//	qvec = cross(qvec,tvec,edge1);
+//	v = dot(v,raytrans.end,qvec);
+//
+//	if(v <0 || (u+v) > det)
+//		return false;
+//
+//	//calculate t
+//	t = dot(t,edge2,qvec);
+//	t = t * (1.0/det);
+//	u = u * (1.0/det);
+//	v = v * (1.0/det);
+//
+//#else 
+//	if(det > -EP && det < EP)
+//		return false;
+//
+//	tvec = subt(ray.begin,v1);
+//	u = dot(u,tvec,pvec) * (1.0/det);
+//
+//	if(u < 0 || u > 1.0);
+//		return false;
+//
+//	qvec = cross(qvec,tvec,edge1);
+//	v = dot(v,ray.end,qvec) * (1.0/det);
+//	
+//	if(v < 0 || (u+v) > 1.0)
+//		return false;
+//
+//	t = dot(t,edge2,qvec) * (1.0/det);
+//#endif
+//
+//	return true;
+
+	// Find the normal
 	
-	//calculate distance from vertex1 to ray
-	tvec = subt(raytrans.begin,v1);
-	u = dot(u,tvec,pvec);
-
-	if(u < 0 || u > det)
-		return false;
-
-	qvec = cross(qvec,tvec,edge1);
-	v = dot(v,raytrans.end,qvec);
-
-	if(v <0 || (u+v) > det)
-		return false;
-
-	//calculate t
-	t = dot(t,edge2,qvec);
-	t = t * (1.0/det);
-	u = u * (1.0/det);
-	v = v * (1.0/det);
-
-#else 
-	if(det > -EP && det < EP)
-		return false;
-
-	tvec = subt(ray.begin,v1);
-	u = dot(u,tvec,pvec) * (1.0/det);
-
-	if(u < 0 || u > 1.0);
-		return false;
-
-	qvec = cross(qvec,tvec,edge1);
-	v = dot(v,ray.end,qvec) * (1.0/det);
-	
-	if(v < 0 || (u+v) > 1.0)
-		return false;
-
-	t = dot(t,edge2,qvec) * (1.0/det);
-#endif
-
-	return true;
 }
 
 void Scene::parsefile (FILE *fp) {
@@ -508,6 +716,7 @@ void Scene::parsefile (FILE *fp) {
 	  }
 	  vec3 center = vec3(pos[0],pos[1],pos[2]);
 	  Sphere *s =new Sphere(center,radius);
+	  s->setparams(shading);
 	  sobjects.push_back(s);
 	  spherecount++;
 	  sflag=1;
@@ -526,12 +735,13 @@ void Scene::parsefile (FILE *fp) {
 	  int num = sscanf(line, "%s %lf %lf %lf", command, v.pos, v.pos+1, v.pos+2) ;
 	  assert(num == 4) ; assert(!strcmp(command,"vertex")) ;
 	  vert[curvert] = v ;
-	  ++curvert;
+	  ++curvert ;
+	}
 	  //Quadrilateral q = Quadrilateral(vert[0],vert[1],vert[2],vert[3]);	
 	  //qlist[quadcount]=q;
 	  //quadcount++;
 	  //qflag=1;
-	  }
+	  
 		
 	else if (!strcmp(command, "tri")) { // Triangle from 3 vertices
 	 int pts[3] ; 
@@ -551,10 +761,10 @@ void Scene::parsefile (FILE *fp) {
 	vec3 vertex2 = vec3(vertex[1][0],vertex[1][1],vertex[1][2]);
 	vec3 vertex3 = vec3(vertex[2][0],vertex[2][1],vertex[2][2]);
 	Triangle *t = new Triangle(vertex1,vertex2,vertex3);
+	t->setparams(shading);
 	sobjects.push_back(t);
 	trianglecount++;
 	tflag=1;
-
 	}
 
 	/* Transformations  */
@@ -618,14 +828,14 @@ void Scene::parsefile (FILE *fp) {
 	 assert(lightnum >= 0 && lightnum < 7) ;
 
 	 //int mylight = GL_LIGHT0 + lightnum ;
-	 Light *light = new Light();
+	 light = new Light();
 	 lights.push_back(light);
 	 light->setvalues(direction,color,shading,0);
 	 ++lightnum ;
        }
 
       else if (!strcmp(command, "point")) {
-	 float direction[4], color[4] ; color[3] = 1.0 ; direction[3] = 1.0 ;
+	 float direction[3], color[3];
 	 int num = sscanf(line, "%s %f %f %f %f %f %f", command, direction, direction+1, direction+2, color, color+1, color+2) ;
 	 assert(num == 7) ;
 	 assert(lightnum >= 0 && lightnum < 7) ;
@@ -637,18 +847,24 @@ void Scene::parsefile (FILE *fp) {
        }
 
      else if (!strcmp(command, "attenuation")) {
-	   char **args;			
-       int num = sscanf(line, "%s %lf %lf %lf", command, args, args + 1, args +2) ;
+	   float arg[6];			
+       int num = sscanf(line, "%s %lf %lf %lf", command, arg, arg + 1, arg +2) ;
        assert(num == 4) ;
        assert(!strcmp(command, "attenuation")) ;
 		if(!shading)
 		   shading = new Shade();
-		shading->setvalues(args,5);
+		else
+			if(shading->isAmbientSet)
+		   {
+			   delete shading;
+			   shading = new Shade();
+		   }
+		shading->setvalues(arg,5);
      }
 
      else if (!strcmp(command, "ambient")) {
-       char **args;	
-       int num = sscanf(line, "%s %f %f %f", command, args, args + 1, args +2) ;
+       float args[6];
+	   int num = sscanf(line, "%s %f %f %f", command, args, args + 1, args +2) ;
        assert(num == 4) ;
        assert(!strcmp(command, "ambient")) ;
        if(!shading)
@@ -667,8 +883,8 @@ void Scene::parsefile (FILE *fp) {
     /****************** MATERIALS ************************/
 
      else if (!strcmp(command, "diffuse")) {
-       char **args;
-       int num = sscanf(line, "%s %f %f %f", command,args, args + 1, args +2) ;
+       float args[6];
+       int num = sscanf(line, "%s %f %f %f", command, args, args + 1, args +2) ;
        assert(num == 4) ; assert (!strcmp(command, "diffuse")) ;
        if(!shading)
 		   shading = new Shade();
@@ -682,7 +898,7 @@ void Scene::parsefile (FILE *fp) {
      }
 
      else if (!strcmp(command, "specular")) {
-       char **args;
+       float args[6];
        int num = sscanf(line, "%s %f %f %f", command,args, args + 1, args +2) ;
        assert(num == 4) ; assert (!strcmp(command, "specular")) ;
        if(!shading)
@@ -697,7 +913,7 @@ void Scene::parsefile (FILE *fp) {
      }
 
      else if (!strcmp(command, "shininess")) {
-       char **args;
+       float args[6];
        int num = sscanf(line, "%s %f", command, args) ;
        assert(num == 2) ; assert (!strcmp(command, "shininess")) ;
        if(!shading)
@@ -712,7 +928,7 @@ void Scene::parsefile (FILE *fp) {
      }
 
      else if (!strcmp(command, "emission")) {
-      char **args;
+	  float args[6];
        int num = sscanf(line, "%s %f %f %f", command, args, args + 1, args +2) ;
        assert(num == 4) ; assert (!strcmp(command, "emission")) ;
        if(!shading)

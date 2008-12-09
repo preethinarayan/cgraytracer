@@ -6,6 +6,7 @@
 void Transformation::push(mat4 Mat)
 {
 	stack[++top]=new mat4(Mat);
+	printf("pushed\n");
 }
 
 mat4 Transformation::pop()

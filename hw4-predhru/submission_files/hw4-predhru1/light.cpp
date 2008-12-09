@@ -1,6 +1,7 @@
 #include "Light.h"
 #include "nv/nv_math.h"
 #include "nv/nv_algebra.h"
+#include "stdio.h"
 
 bool Light::setvalues(float _position[3],float _values[3], Shade *shading, int type)
 {
@@ -64,60 +65,43 @@ Shade::Shade()
 			shadingType[i]=i;
 }
 
-bool Shade::setvalues(char **args,int type)
+bool Shade::setvalues(float args[6],int type)
 {
-	if( !args )
-		return false;
-
-	if(type == 4)
-	{
-		if(!args[0])
-			return false;
-	}
-	else
-	{
-		int argc = (type == 6)? 5 : 3;
-		for(int i=0; i<argc; i++)
-		{
-			if(!args[i])
-				return false;
-		}
-	}
-
 	switch(type)
 	{
 	case 0:
 		isAmbientSet = true;
-		ambient =  vec3((float)atof(args[0]),(float)atof(args[1]),(float)atof(args[2]));
+		ambient =  vec3(args[0],args[1],args[2]);
 		break;
 	case 1:
 		isSpecularSet = true;
-		specular = vec3((float)atof(args[0]),(float)atof(args[1]),(float)atof(args[2]));
+		specular = vec3(args[0],args[1],args[2]);
 		break;
 	case 2:
 		isDiffuseSet = true;
-		diffuse = vec3((float)atof(args[0]),(float)atof(args[1]),(float)atof(args[2]));
+		diffuse = vec3(args[0],args[1],args[2]);
 		break;
 	case 3:
 		isEmissionSet = true;
-		emission = vec3((float)atof(args[0]),(float)atof(args[1]),(float)atof(args[2]));
+		emission = vec3(args[0],args[1],args[2]);
 		break;
 	case 4:
 		isShininessSet = true;
-		shininess = (float)atof(args[0]);
+		shininess = args[0];
 		break;
 	case 5:
-		attenuation = vec3((float)atof(args[0]),(float)atof(args[1]),(float)atof(args[2]));
+		attenuation = vec3(args[0],args[1],args[2]);
+		printf("attenuation : %f %f %f\n",attenuation.x,attenuation.y,attenuation.z);
 		break;
 	case 6:
-		spot_direction = vec3((float)atof(args[0]),(float)atof(args[1]),(float)atof(args[2]));
-		spot_cutoff = (float)atof(args[3]);
-		spot_exponent = (float)atof(args[4]);
+		spot_direction = vec3(args[0],args[1],args[2]);
+		spot_cutoff = args[3];
+		spot_exponent = args[4];
 		break;	
 	case 7:
-		ref_eta1 = (float)atof(args[0]);
-		ref_eta2 = (float)atof(args[1]);
-		transmit = vec3((float)atof(args[2]),(float)atof(args[3]),(float)atof(args[4]));
+		ref_eta1 = args[0];
+		ref_eta2 = args[1];
+		transmit = vec3(args[2],args[3],args[4]);
 		isRefractionEnable=true;
 		break;
 	}
