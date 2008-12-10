@@ -133,7 +133,7 @@ vec3 Sphere::getReflection(Ray *ray,int depth,bool secLargest,Scene *scene,vec3 
 		return vec3(0.0,0.0,0.0);
 
 	vec3 color = vec3(0.0,0.0,0.0);
-	if((this->specular.x != 0.0 || this->specular.y != 0.0 || this->specular.z != 0.0))
+	if((this->specular.x != 0.0 || this->specular.y != 0.0 || this->specular.z != 0.0) && this->shininess == 128)
 	{
 		vec3 normal=getNormal(pt);
 		vec3 I = pt - ray->begin;
@@ -258,12 +258,12 @@ vec3 Triangle::getColor(Scene *scene,Ray *ray, vec3 pt, int depth,bool secLarges
 		diffusefactor = max(diffusefactor,0.0);
 
 		//applying the model equation
-		color = (calculateAttenuation(attenuation,distance) * spotlight_effect(scene->lights[k],dir)) * ((light_ambient * this->ambient) + (specularfactor * light_specular * this->specular) + (diffusefactor * light_diffuse * this->diffuse));
+		color += visibility *((calculateAttenuation(attenuation,distance) * spotlight_effect(scene->lights[k],dir)) * ((light_ambient * this->ambient) + (specularfactor * light_specular * this->specular) + (diffusefactor * light_diffuse * this->diffuse)));
 //		printf("Color is %f %f %f\n",color.x,color.y,color.z);
 	}
 	
 	//adding visibility
-	color += visibility*color;
+//	color += visibility*color;
 
 	if(scene->lightnum > 0)
 	{
@@ -337,12 +337,12 @@ vec3 Sphere::getColor(Scene *scene,Ray *ray, vec3 pt, int depth,bool secLargest)
 		diffusefactor = max(diffusefactor,0.0);
 
 		//applying the model equation
-		color = (calculateAttenuation(attenuation,distance) * spotlight_effect(scene->lights[k],dir)) * ((light_ambient * this->ambient) + (specularfactor * light_specular * this->specular) + (diffusefactor * light_diffuse * this->diffuse));
+		color += visibility *((calculateAttenuation(attenuation,distance) * spotlight_effect(scene->lights[k],dir)) * ((light_ambient * this->ambient) + (specularfactor * light_specular * this->specular) + (diffusefactor * light_diffuse * this->diffuse)));
 //		printf("Color is %f %f %f\n",color.x,color.y,color.z);
 	}
 	
 	//adding visibility
-	color += visibility*color;
+	//color += visibility*color;
 
 	if(scene->lightnum > 0)
 	{
